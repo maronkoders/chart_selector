@@ -1,9 +1,13 @@
 # app.py
+import json
 import math
+from pathlib import Path
 
 import streamlit as st
 import MetaTrader5 as mt5
 import pandas as pd
+
+WATCHLIST_FILE = Path(__file__).parent / "watchlist.json"
 
 INDEX_CLASS_KEYWORDS = [
     ("Volatility", "volatility"),
@@ -20,6 +24,68 @@ def get_index_class(asset_name: str) -> str:
         if keyword in name_lower:
             return label
     return "Other"
+
+
+def load_watchlist() -> set[str]:
+    if WATCHLIST_FILE.exists():
+        try:
+            return set(json.loads(WATCHLIST_FILE.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, OSError):
+            return set()
+    return set()
+
+
+def save_watchlist(watchlist: set[str]) -> None:
+    WATCHLIST_FILE.write_text(
+        json.dumps(sorted(watchlist), indent=2),
+        encoding="utf-8",
+    )
+
+
+def init_watchlist() -> set[str]:
+    if "watchlist" not in st.session_state:
+        st.session_state.watchlist = load_watchlist()
+    return st.session_state.watchlist
+
+
+def add_to_watchlist(asset: str) -> None:
+    st.session_state.watchlist.add(asset)
+    save_watchlist(st.session_state.watchlist)
+
+
+def remove_from_watchlist(asset: str) -> None:
+    st.session_state.watchlist.discard(asset)
+    save_watchlist(st.session_state.watchlist)
+
+
+def render_sidebar_watchlist(watchlist: set[str], df_assets: pd.DataFrame, max_vol_col: str) -> None:
+    st.sidebar.divider()
+    st.sidebar.subheader("Watchlist")
+    st.sidebar.caption(f"{len(watchlist)} saved asset(s)")
+
+    if not watchlist:
+        st.sidebar.info("Add assets from the scanner using ➕ Add.")
+        return
+
+    for asset in sorted(watchlist):
+        asset_row = df_assets[df_assets["Asset"] == asset]
+        label_col, remove_col = st.sidebar.columns([5, 1])
+
+        with label_col:
+            st.markdown(f"**{asset}**")
+            if asset_row.empty:
+                st.caption("No longer available in scanner")
+            else:
+                row = asset_row.iloc[0]
+                st.caption(
+                    f"Margin ${row['Min-Margin ($)']:.2f} · "
+                    f"Max Vol {row[max_vol_col]}"
+                )
+
+        with remove_col:
+            if st.button("✕", key=f"remove_watchlist_{asset}", help="Remove from watchlist"):
+                remove_from_watchlist(asset)
+                st.rerun()
 
 # 1. PAGE CONFIGURATION
 st.set_page_config(layout="wide", page_title="Simple MT5 Risk Dashboard")
@@ -117,6 +183,8 @@ if not df_assets.empty:
     df_assets = df_assets[df_assets["Suitable"] == "🟢 Safe Size"]
     df_assets = df_assets.sort_values(by="Min-Margin ($)", ascending=True)
 
+watchlist = init_watchlist()
+
 # 5. RENDER THE INTERFACE DISPLAY LAYOUT
 st.subheader("Asset Risk Scanner")
 if not df_assets.empty:
@@ -126,6 +194,10 @@ if not df_assets.empty:
     )
     df_assets["Index Class"] = df_assets["Asset"].apply(get_index_class)
 
+    render_sidebar_watchlist(watchlist, df_assets, max_vol_col)
+
+    df_scanner = df_assets[~df_assets["Asset"].isin(watchlist)].copy()
+
     display_columns = [
         "Asset",
         "Min Lot",
@@ -134,8 +206,9 @@ if not df_assets.empty:
         max_vol_col,
         "Suitable",
     ]
-    total_assets = len(df_assets)
-    index_classes = sorted(df_assets["Index Class"].unique())
+    watchlist_count = len(watchlist)
+    total_assets = len(df_scanner)
+    index_classes = sorted(df_scanner["Index Class"].unique()) if not df_scanner.empty else []
 
     filter_col, search_col, page_size_col = st.columns([2, 2, 1])
     with filter_col:
@@ -153,7 +226,26 @@ if not df_assets.empty:
     with page_size_col:
         page_size = st.selectbox("Rows per page", options=[10, 25, 50, 100], index=1)
 
-    df_filtered = df_assets.copy()
+    add_col, add_btn_col = st.columns([4, 1])
+    available_assets = sorted(df_scanner["Asset"].unique()) if not df_scanner.empty else []
+    with add_col:
+        asset_to_add = st.selectbox(
+            "Add to watchlist",
+            options=available_assets,
+            index=None,
+            placeholder="Choose an asset to watch...",
+        )
+    with add_btn_col:
+        st.markdown("<div style='height: 1.6rem'></div>", unsafe_allow_html=True)
+        if st.button(
+            "➕ Add to watchlist",
+            disabled=asset_to_add is None,
+            use_container_width=True,
+        ):
+            add_to_watchlist(asset_to_add)
+            st.rerun()
+
+    df_filtered = df_scanner.copy()
     if selected_classes:
         df_filtered = df_filtered[df_filtered["Index Class"].isin(selected_classes)]
     if search_query.strip():
@@ -178,27 +270,54 @@ if not df_assets.empty:
     page_end = page_start + page_size
     df_page = df_filtered.iloc[page_start:page_end]
 
-    if filtered_count == 0:
-        st.caption(f"No matching assets (Total listed: {total_assets})")
+    if total_assets == 0:
+        st.caption(f"Scanner: 0 assets · Watchlist: {watchlist_count}")
+        st.info("All available assets are in your watchlist. Remove one from the sidebar to see it here again.")
+    elif filtered_count == 0:
+        st.caption(
+            f"No matching assets (Scanner: {total_assets}, Watchlist: {watchlist_count})"
+        )
         st.info("No assets match your search or filter criteria.")
     else:
         showing_from = page_start + 1
         showing_to = min(page_end, filtered_count)
         st.caption(
             f"Showing {showing_from}-{showing_to} of {filtered_count} assets "
-            f"(Total listed: {total_assets})"
+            f"(Scanner: {total_assets}, Watchlist: {watchlist_count})"
         )
 
         row_height = 35
         header_height = 38
         table_height = len(df_page) * row_height + header_height
 
-        st.dataframe(
+        table_selection = st.dataframe(
             df_page[display_columns],
             hide_index=True,
             use_container_width=True,
             height=table_height,
+            on_select="rerun",
+            selection_mode="single-row",
+            key="asset_scanner_table",
         )
+
+        selected_rows = (
+            table_selection.selection.rows
+            if table_selection.selection is not None
+            else []
+        )
+        selected_asset = (
+            df_page.iloc[selected_rows[0]]["Asset"] if selected_rows else None
+        )
+
+        quick_add_col, _ = st.columns([2, 4])
+        with quick_add_col:
+            if st.button(
+                "➕ Add selected row to watchlist",
+                disabled=selected_asset is None,
+                use_container_width=True,
+            ):
+                add_to_watchlist(selected_asset)
+                st.rerun()
 
         _, prev_col, page_col, next_col, _ = st.columns([3, 1, 1.5, 1, 3])
         with prev_col:
@@ -212,6 +331,20 @@ if not df_assets.empty:
                 st.session_state.asset_page += 1
                 st.rerun()
 else:
+    st.sidebar.divider()
+    st.sidebar.subheader("Watchlist")
+    st.sidebar.caption(f"{len(watchlist)} saved asset(s)")
+    if not watchlist:
+        st.sidebar.info("Add assets from the scanner using ➕ Add.")
+    else:
+        for asset in sorted(watchlist):
+            label_col, remove_col = st.sidebar.columns([5, 1])
+            with label_col:
+                st.markdown(f"**{asset}**")
+            with remove_col:
+                if st.button("✕", key=f"remove_watchlist_{asset}", help="Remove from watchlist"):
+                    remove_from_watchlist(asset)
+                    st.rerun()
     st.warning("No assets found. Ensure MT5 is connected and logged in to a broker.")
 
 # Good practice: clean up or leave terminal connection warm for seamless active state refreshes
