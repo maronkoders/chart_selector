@@ -11,9 +11,6 @@ INDEX_CLASS_KEYWORDS = [
     ("Crash", "crash"),
     ("Step", "step"),
     ("Jump", "jump"),
-    ("Dex", "dex"),
-    ("Range", "range"),
-    ("Skew", "skew"),
 ]
 
 
