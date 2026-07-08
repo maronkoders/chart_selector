@@ -7,7 +7,8 @@ import pandas as pd
 from core import mt5_client
 from core.config import load_config, set_risk_params
 from core.watchlist_store import init_watchlist, add_to_watchlist, remove_from_watchlist
-from core.velocity import compute_velocity_matrix, TIMEFRAME_MINUTES
+from core.hidden_assets_store import init_hidden_assets, hide_asset, unhide_asset, clear_hidden_assets
+from core.velocity import compute_price_velocity
 
 INDEX_CLASS_KEYWORDS = [
     ("Volatility", "volatility"),
@@ -26,7 +27,7 @@ def get_index_class(asset_name: str) -> str:
     return "Other"
 
 
-def render_sidebar_watchlist(watchlist: set[str], df_assets: pd.DataFrame, max_vol_col: str) -> None:
+def render_sidebar_watchlist(watchlist: set[str], df_assets: pd.DataFrame) -> None:
     st.sidebar.divider()
     st.sidebar.subheader("Watchlist")
     st.sidebar.caption(f"{len(watchlist)} saved asset(s)")
@@ -45,9 +46,11 @@ def render_sidebar_watchlist(watchlist: set[str], df_assets: pd.DataFrame, max_v
                 st.caption("No longer available in scanner")
             else:
                 row = asset_row.iloc[0]
+                pip_value = row["Pip Value ($/min)"]
+                pip_value_label = f"${pip_value:.4f}" if pd.notna(pip_value) else "—"
                 st.caption(
                     f"Margin ${row['Min-Margin ($)']:.2f} · "
-                    f"Max Vol {row[max_vol_col]}"
+                    f"Pip Value {pip_value_label}"
                 )
 
         with remove_col:
@@ -56,15 +59,55 @@ def render_sidebar_watchlist(watchlist: set[str], df_assets: pd.DataFrame, max_v
                 st.rerun()
 
 
+def render_sidebar_hidden_assets(hidden_assets: set[str]) -> None:
+    st.sidebar.divider()
+    st.sidebar.subheader("Hidden Assets")
+    st.sidebar.caption(f"{len(hidden_assets)} hidden asset(s)")
+
+    if not hidden_assets:
+        st.sidebar.info("Select a row in the scanner and click 🙈 Hide to remove it from view.")
+        return
+
+    for asset in sorted(hidden_assets):
+        label_col, remove_col = st.sidebar.columns([5, 1])
+        with label_col:
+            st.markdown(f"**{asset}**")
+        with remove_col:
+            if st.button("✕", key=f"unhide_{asset}", help="Unhide this asset"):
+                unhide_asset(asset)
+                st.rerun()
+
+    if st.sidebar.button("🧹 Clear all hidden", width="stretch"):
+        clear_hidden_assets()
+        st.rerun()
+
+
 st.title("🎯 Deriv Synthetic Indices Advisor")
 
 cfg = st.session_state.setdefault("app_config", load_config())
 
-# 1. SIDEBAR RISK INPUTS (persisted to broker_config.json so Dashboard/Settings stay in sync)
+# 1. CONNECT TO MT5 first — Account Balance below is read live from this connection.
+ok, msg = mt5_client.ensure_connection(cfg)
+if not ok:
+    st.error(msg)
+    st.page_link("app_pages/settings.py", label="Configure broker login in Settings →", icon="⚙️")
+    st.stop()
+
+# 2. SIDEBAR RISK INPUTS (persisted to broker_config.json so Dashboard/Settings stay in sync)
 st.sidebar.header("Account Parameters")
-account_size = st.sidebar.number_input(
-    "Account Balance ($)", min_value=1.0, value=float(cfg["risk"]["account_size"]), step=1.0
-)
+
+account_info = mt5_client.get_account_info()
+if account_info:
+    account_size = float(account_info["balance"])
+else:
+    # Fall back to the last known balance if MT5 is connected but the
+    # account info call itself fails for some reason.
+    account_size = float(cfg["risk"]["account_size"])
+    st.sidebar.warning("Could not read live balance — using last saved value.")
+
+st.sidebar.metric(label="Account Balance ($)", value=f"${account_size:,.2f}")
+st.sidebar.caption("Pulled automatically from your connected MT5 account.")
+
 risk_percentage = st.sidebar.slider(
     "Risk Tolerance (%)", min_value=1.0, max_value=100.0, value=float(cfg["risk"]["risk_percentage"])
 )
@@ -74,13 +117,6 @@ if account_size != cfg["risk"]["account_size"] or risk_percentage != cfg["risk"]
 
 max_risk_cash = account_size * (risk_percentage / 100.0)
 st.sidebar.metric(label="Max Cash at Risk", value=f"${max_risk_cash:,.2f}")
-
-# 2. CONNECT TO MT5 (shared connection, reused across pages)
-ok, msg = mt5_client.ensure_connection(cfg)
-if not ok:
-    st.error(msg)
-    st.page_link("app_pages/settings.py", label="Configure broker login in Settings →", icon="⚙️")
-    st.stop()
 
 # 3. FETCH SYNTHETIC INDICES SPEC SHEETS
 with st.status("Scanning synthetic indices...", expanded=True) as status:
@@ -135,13 +171,23 @@ with st.status("Scanning synthetic indices...", expanded=True) as status:
 
             is_suitable = min_margin <= max_risk_cash and min_margin > 0
 
+            velocity_result = compute_price_velocity(name, "M1")
+            velocity_m1 = (
+                round(velocity_result["velocity"], 4)
+                if velocity_result and velocity_result["velocity"] is not None
+                else None
+            )
+            pip_value = round(velocity_m1 * min_lot, 4) if velocity_m1 is not None else None
+
             asset_data.append({
                 "Asset": name,
                 "Min Lot": min_lot,
                 "Min-Margin ($)": round(min_margin, 2),
                 "Volume Limit": vol_limit,
                 "Min Risk Exposure ($)": round(min_trade_risk_cost, 2),
-                "Suitable": "🟢 Safe Size" if is_suitable else "🔴 Volatility Too High"
+                "Suitable": "🟢 Safe Size" if is_suitable else "🔴 Volatility Too High",
+                "Velocity (pips/min)": velocity_m1,
+                "Pip Value ($/min)": pip_value,
             })
 
         progress_bar.empty()
@@ -152,33 +198,41 @@ with st.status("Scanning synthetic indices...", expanded=True) as status:
 # Convert to DataFrame for layout structuring
 df_assets = pd.DataFrame(asset_data)
 
-# Filter to show ONLY safe assets and sort from least margin to most
+# Filter to show ONLY safe assets, then sort intelligently: assets with both
+# low margin AND low pip value (cheap, calm) rise to the top; assets with both
+# high margin AND high pip value (expensive, fast-moving) sink to the bottom.
+# Ranks are used instead of raw values so margin (small $ range) and pip value
+# (can span 0.001 to 100+) contribute equally regardless of scale.
 if not df_assets.empty:
     df_assets = df_assets[df_assets["Suitable"] == "🟢 Safe Size"]
-    df_assets = df_assets.sort_values(by="Min-Margin ($)", ascending=True)
+
+    margin_rank = df_assets["Min-Margin ($)"].rank(method="min", ascending=True)
+    pip_value_rank = df_assets["Pip Value ($/min)"].rank(method="min", ascending=True, na_option="bottom")
+    df_assets["Risk Score"] = margin_rank + pip_value_rank
+
+    df_assets = df_assets.sort_values(by="Risk Score", ascending=True)
 
 watchlist = init_watchlist()
+hidden_assets = init_hidden_assets()
 
 # 4. RENDER THE INTERFACE DISPLAY LAYOUT
 st.subheader("Asset Risk Scanner")
 if not df_assets.empty:
-    max_vol_col = f"Max Vol Limit Per {account_size:.2f}"
-    df_assets[max_vol_col] = df_assets["Min-Margin ($)"].apply(
-        lambda margin: int(account_size / margin) if margin > 0 else 0
-    )
     df_assets["Index Class"] = df_assets["Asset"].apply(get_index_class)
 
-    render_sidebar_watchlist(watchlist, df_assets, max_vol_col)
+    render_sidebar_watchlist(watchlist, df_assets)
+    render_sidebar_hidden_assets(hidden_assets)
 
-    df_scanner = df_assets[~df_assets["Asset"].isin(watchlist)].copy()
+    df_scanner = df_assets[
+        ~df_assets["Asset"].isin(watchlist) & ~df_assets["Asset"].isin(hidden_assets)
+    ].copy()
 
     display_columns = [
         "Asset",
         "Min Lot",
         "Min-Margin ($)",
-        "Volume Limit",
-        max_vol_col,
-        "Suitable",
+        "Pip Value ($/min)",
+        "Velocity (pips/min)",
     ]
     watchlist_count = len(watchlist)
     total_assets = len(df_scanner)
@@ -245,11 +299,11 @@ if not df_assets.empty:
     df_page = df_filtered.iloc[page_start:page_end]
 
     if total_assets == 0:
-        st.caption(f"Scanner: 0 assets · Watchlist: {watchlist_count}")
-        st.info("All available assets are in your watchlist. Remove one from the sidebar to see it here again.")
+        st.caption(f"Scanner: 0 assets · Watchlist: {watchlist_count} · Hidden: {len(hidden_assets)}")
+        st.info("All available assets are in your watchlist or hidden. Remove/unhide one to see it here again.")
     elif filtered_count == 0:
         st.caption(
-            f"No matching assets (Scanner: {total_assets}, Watchlist: {watchlist_count})"
+            f"No matching assets (Scanner: {total_assets}, Watchlist: {watchlist_count}, Hidden: {len(hidden_assets)})"
         )
         st.info("No assets match your search or filter criteria.")
     else:
@@ -257,7 +311,7 @@ if not df_assets.empty:
         showing_to = min(page_end, filtered_count)
         st.caption(
             f"Showing {showing_from}-{showing_to} of {filtered_count} assets "
-            f"(Scanner: {total_assets}, Watchlist: {watchlist_count})"
+            f"(Scanner: {total_assets}, Watchlist: {watchlist_count}, Hidden: {len(hidden_assets)})"
         )
 
         row_height = 35
@@ -275,8 +329,13 @@ if not df_assets.empty:
             width="stretch",
             height=table_height,
             on_select="rerun",
-            selection_mode="single-row",
+            selection_mode="multi-row",
             key=table_key,
+            column_config={
+                "Pip Value ($/min)": st.column_config.NumberColumn(
+                    "Pip Value ($/min)", format="$%.4f"
+                ),
+            },
         )
 
         selected_rows = (
@@ -285,21 +344,42 @@ if not df_assets.empty:
             else []
         )
 
-        selected_asset = None
-        if selected_rows:
-            row_idx = selected_rows[0]
-            if 0 <= row_idx < len(df_page):
-                selected_asset = df_page.iloc[row_idx]["Asset"]
+        selected_assets = [
+            df_page.iloc[row_idx]["Asset"]
+            for row_idx in selected_rows
+            if 0 <= row_idx < len(df_page)
+        ]
+        selection_count = len(selected_assets)
 
-        quick_add_col, _ = st.columns([2, 4])
+        quick_add_col, quick_hide_col, _ = st.columns([2, 2, 2])
         with quick_add_col:
-            if st.button(
-                "➕ Add selected row to watchlist",
-                disabled=selected_asset is None,
-                width="stretch",
-            ):
-                add_to_watchlist(selected_asset)
+            add_label = (
+                f"➕ Add {selection_count} selected to watchlist"
+                if selection_count > 1
+                else "➕ Add selected row to watchlist"
+            )
+            if st.button(add_label, disabled=selection_count == 0, width="stretch"):
+                for asset in selected_assets:
+                    add_to_watchlist(asset)
+                st.success(f"Added {selection_count} asset(s) to the watchlist.")
                 st.rerun()
+        with quick_hide_col:
+            hide_label = (
+                f"🙈 Hide {selection_count} selected"
+                if selection_count > 1
+                else "🙈 Hide selected row"
+            )
+            if st.button(
+                hide_label,
+                disabled=selection_count == 0,
+                width="stretch",
+                help="Hides the selected asset(s) from the scanner until unhidden from the sidebar.",
+            ):
+                for asset in selected_assets:
+                    hide_asset(asset)
+                st.success(f"Hid {selection_count} asset(s).")
+                st.rerun()
+
 
         _, prev_col, page_col, next_col, _ = st.columns([3, 1, 1.5, 1, 3])
         with prev_col:
@@ -313,80 +393,6 @@ if not df_assets.empty:
                 st.session_state.asset_page += 1
                 st.rerun()
 else:
-    st.sidebar.divider()
-    st.sidebar.subheader("Watchlist")
-    st.sidebar.caption(f"{len(watchlist)} saved asset(s)")
-    if not watchlist:
-        st.sidebar.info("Add assets from the scanner using ➕ Add.")
-    else:
-        for asset in sorted(watchlist):
-            label_col, remove_col = st.sidebar.columns([5, 1])
-            with label_col:
-                st.markdown(f"**{asset}**")
-            with remove_col:
-                if st.button("✕", key=f"remove_watchlist_{asset}", help="Remove from watchlist"):
-                    remove_from_watchlist(asset)
-                    st.rerun()
+    render_sidebar_watchlist(watchlist, pd.DataFrame(columns=["Asset"]))
+    render_sidebar_hidden_assets(hidden_assets)
     st.warning("No assets found. Ensure MT5 is connected and logged in to a broker.")
-
-st.divider()
-
-# 5. PRICE VELOCITY ANALYZER
-st.subheader("📈 Price Velocity Analyzer")
-st.caption(
-    "Summed Realized Candle Velocity — sums the absolute body movement of every closed "
-    "candle since the start of the session (plus the overnight gap), divided by elapsed "
-    "minutes. Higher = the price is covering more ground per minute right now."
-)
-
-velocity_asset_options = sorted({sym.name for sym in symbols}) if symbols else []
-
-if not velocity_asset_options:
-    st.info("Run the scanner above first so there are assets available to analyze.")
-else:
-    va_col, btn_col = st.columns([4, 1])
-    with va_col:
-        velocity_symbol = st.selectbox(
-            "Asset to analyze",
-            options=velocity_asset_options,
-            key="velocity_symbol_select",
-        )
-    with btn_col:
-        st.markdown("<div style='height: 1.6rem'></div>", unsafe_allow_html=True)
-        calc_clicked = st.button("Calculate", key="calc_velocity_btn", width="stretch")
-
-    if calc_clicked:
-        with st.spinner(f"Calculating price velocity for {velocity_symbol}..."):
-            st.session_state.velocity_matrix = compute_velocity_matrix(velocity_symbol)
-            st.session_state.velocity_matrix_symbol = velocity_symbol
-
-    matrix = st.session_state.get("velocity_matrix")
-    matrix_symbol = st.session_state.get("velocity_matrix_symbol")
-
-    if matrix and matrix_symbol == velocity_symbol:
-        rows = []
-        for row in matrix:
-            rows.append({
-                "Timeframe": row["timeframe"],
-                "TF Minutes": TIMEFRAME_MINUTES[row["timeframe"]],
-                "Closed Candles (N)": row["n"],
-                "Total Movement (pips)": round(row["total_pips"], 2) if row["total_pips"] is not None else "—",
-                "Elapsed": f"{row['elapsed_minutes']} min" if row["elapsed_minutes"] else ("—" if row["timeframe"] != "D1" else f"{row['n']} days"),
-                "Velocity": round(row["velocity"], 4) if row["velocity"] is not None else "—",
-                "Unit": row["unit"],
-            })
-        df_velocity = pd.DataFrame(rows)
-        st.dataframe(df_velocity, hide_index=True, width="stretch")
-
-        valid_rows = [r for r in matrix if r["velocity"] is not None]
-        if valid_rows:
-            fastest = max(valid_rows, key=lambda r: r["velocity"] if r["unit"] == "pips/min" else 0)
-            if fastest["unit"] == "pips/min":
-                st.caption(
-                    f"Fastest intraday timeframe right now: **{fastest['timeframe']}** at "
-                    f"**{fastest['velocity']:.4f} pips/min** ({fastest['n']} closed candles today)."
-                )
-    elif matrix_symbol and matrix_symbol != velocity_symbol:
-        st.caption("Click **Calculate** to analyze the newly selected asset.")
-    else:
-        st.caption("Select an asset and click **Calculate** to see its velocity across all timeframes.")

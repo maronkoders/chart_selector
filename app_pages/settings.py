@@ -90,11 +90,15 @@ if st.button("🔌 Test Connection with Active Profile", width="stretch"):
 st.divider()
 
 st.subheader("Default Risk Parameters")
-st.caption("These defaults are used by the Indices Advisor scanner and can also be adjusted there.")
+st.caption(
+    "Account Balance is now pulled automatically from your connected MT5 account on the "
+    "Indices Advisor page and can't be edited there. The value below is only used as a "
+    "fallback if MT5 is briefly unreachable."
+)
 r1, r2 = st.columns(2)
 with r1:
     account_size = st.number_input(
-        "Account Balance ($)", min_value=1.0, value=float(cfg["risk"]["account_size"]), step=1.0
+        "Account Balance ($) — offline fallback", min_value=1.0, value=float(cfg["risk"]["account_size"]), step=1.0
     )
 with r2:
     risk_percentage = st.slider(
