@@ -22,7 +22,64 @@ IMAGE_TYPES = ["png", "jpg", "jpeg", "gif", "webp"]
 st.title("📓 Trading Journal")
 
 cfg = st.session_state.setdefault("app_config", load_config())
-journal = init_journal()
+
+# Data source selection
+st.sidebar.header("Data Source")
+data_source = st.sidebar.radio(
+    "Select data source",
+    options=["Live MT5", "Stored Journal"],
+    index=0,
+    help="Live MT5 fetches current account history. Stored Journal uses saved journal.json entries."
+)
+
+# Try to fetch live data from MT5 if connected
+mt5_data = None
+mt5_error = None
+if data_source == "Live MT5":
+    try:
+        ok, msg = mt5_client.ensure_connection(cfg)
+        if ok:
+            to_date = dt.datetime.now()
+            from_date = to_date - dt.timedelta(days=30)  # Default to last 30 days
+            deals_df = mt5_client.get_history_deals_df(from_date, to_date)
+            if not deals_df.empty:
+                closing_deals = deals_df[deals_df["Entry"] == 1]
+                if not closing_deals.empty:
+                    # Convert MT5 deals to journal format
+                    mt5_data = []
+                    for _, row in closing_deals.iterrows():
+                        mt5_data.append({
+                            "id": str(row["Ticket"]),
+                            "date": row["Time"].strftime("%Y-%m-%d %H:%M"),
+                            "asset": row["Symbol"],
+                            "direction": row["Type"],
+                            "lots": float(row["Volume"]),
+                            "entry_price": float(row["Price"]),
+                            "exit_price": None,
+                            "pnl": float(row["Profit"]),
+                            "notes": "Live MT5 data",
+                            "images": [],
+                            "mt5_ticket": int(row["Ticket"]),
+                        })
+            else:
+                mt5_error = "No trade history found in MT5 for the selected period."
+        else:
+            mt5_error = f"MT5 connection failed: {msg}"
+    except Exception as e:
+        mt5_error = f"Could not fetch live MT5 data: {e}"
+
+# Use MT5 data if available and selected, otherwise fall back to stored journal
+if data_source == "Live MT5":
+    if mt5_data:
+        journal = mt5_data
+        st.sidebar.success(f"Showing {len(journal)} live trades from MT5")
+    else:
+        st.sidebar.error(mt5_error or "No MT5 data available")
+        journal = init_journal()
+        st.sidebar.info("Falling back to stored journal")
+else:
+    journal = init_journal()
+    st.sidebar.info(f"Showing {len(journal)} stored journal entries")
 
 # 1. IMPORT FROM MT5
 with st.expander("Import closed trades from MT5", expanded=False):
@@ -46,56 +103,57 @@ with st.expander("Import closed trades from MT5", expanded=False):
                 st.rerun()
 
 # 2. ADD MANUAL ENTRY
-with st.expander("Add manual journal entry", expanded=False):
-    watchlist_assets = sorted(load_watchlist())
-    with st.form("add_journal_entry_form", clear_on_submit=True):
-        c1, c2, c3 = st.columns(3)
-        date_val = c1.date_input("Date", value=dt.date.today())
-        asset_val = c2.text_input(
-            "Asset", placeholder=", ".join(watchlist_assets[:3]) if watchlist_assets else "e.g. Volatility 75 Index"
-        )
-        direction_val = c3.selectbox("Direction", options=["Buy", "Sell"])
+if data_source == "Stored Journal":
+    with st.expander("Add manual journal entry", expanded=False):
+        watchlist_assets = sorted(load_watchlist())
+        with st.form("add_journal_entry_form", clear_on_submit=True):
+            c1, c2, c3 = st.columns(3)
+            date_val = c1.date_input("Date", value=dt.date.today())
+            asset_val = c2.text_input(
+                "Asset", placeholder=", ".join(watchlist_assets[:3]) if watchlist_assets else "e.g. Volatility 75 Index"
+            )
+            direction_val = c3.selectbox("Direction", options=["Buy", "Sell"])
 
-        c4, c5, c6 = st.columns(3)
-        lots_val = c4.number_input("Lots", min_value=0.0, step=0.01, value=0.01)
-        entry_price_val = c5.number_input("Entry Price", min_value=0.0, step=0.00001, format="%.5f")
-        exit_price_val = c6.number_input("Exit Price", min_value=0.0, step=0.00001, format="%.5f")
+            c4, c5, c6 = st.columns(3)
+            lots_val = c4.number_input("Lots", min_value=0.0, step=0.01, value=0.01)
+            entry_price_val = c5.number_input("Entry Price", min_value=0.0, step=0.00001, format="%.5f")
+            exit_price_val = c6.number_input("Exit Price", min_value=0.0, step=0.00001, format="%.5f")
 
-        pnl_val = st.number_input("P/L ($)", value=0.0, step=0.01)
-        notes_val = st.text_area("Notes", placeholder="Setup, reasoning, lessons learned...")
-        image_uploads = st.file_uploader(
-            "Attach image(s) to notes",
-            type=IMAGE_TYPES,
-            accept_multiple_files=True,
-            key="add_entry_images",
-        )
+            pnl_val = st.number_input("P/L ($)", value=0.0, step=0.01)
+            notes_val = st.text_area("Notes", placeholder="Setup, reasoning, lessons learned...")
+            image_uploads = st.file_uploader(
+                "Attach image(s) to notes",
+                type=IMAGE_TYPES,
+                accept_multiple_files=True,
+                key="add_entry_images",
+            )
 
-        submitted = st.form_submit_button("Add Entry", width="stretch")
-        if submitted:
-            if not asset_val.strip():
-                st.warning("Asset is required.")
-            else:
-                images = []
-                for uploaded in image_uploads or []:
-                    record = encode_uploaded_image(uploaded)
-                    if record is None:
-                        st.warning(f"Skipped '{uploaded.name}' — over the 5 MB attachment limit.")
-                    else:
-                        images.append(record)
+            submitted = st.form_submit_button("Add Entry", width="stretch")
+            if submitted:
+                if not asset_val.strip():
+                    st.warning("Asset is required.")
+                else:
+                    images = []
+                    for uploaded in image_uploads or []:
+                        record = encode_uploaded_image(uploaded)
+                        if record is None:
+                            st.warning(f"Skipped '{uploaded.name}' — over the 5 MB attachment limit.")
+                        else:
+                            images.append(record)
 
-                add_journal_entry({
-                    "date": date_val.strftime("%Y-%m-%d"),
-                    "asset": asset_val.strip(),
-                    "direction": direction_val,
-                    "lots": lots_val,
-                    "entry_price": entry_price_val,
-                    "exit_price": exit_price_val,
-                    "pnl": pnl_val,
-                    "notes": notes_val.strip(),
-                    "images": images,
-                })
-                st.success("Entry added.")
-                st.rerun()
+                    add_journal_entry({
+                        "date": date_val.strftime("%Y-%m-%d"),
+                        "asset": asset_val.strip(),
+                        "direction": direction_val,
+                        "lots": lots_val,
+                        "entry_price": entry_price_val,
+                        "exit_price": exit_price_val,
+                        "pnl": pnl_val,
+                        "notes": notes_val.strip(),
+                        "images": images,
+                    })
+                    st.success("Entry added.")
+                    st.rerun()
 
 st.divider()
 
@@ -186,13 +244,18 @@ if selected_rows:
 
 action_col, _ = st.columns([2, 4])
 with action_col:
-    if st.button("🗑️ Delete selected entry", disabled=selected_id is None, width="stretch"):
-        remove_journal_entry(selected_id)
-        st.success("Entry deleted.")
-        st.rerun()
+    # Disable delete for live MT5 data
+    delete_disabled = selected_id is None or data_source == "Live MT5"
+    if st.button("🗑️ Delete selected entry", disabled=delete_disabled, width="stretch"):
+        if data_source == "Live MT5":
+            st.warning("Cannot delete live MT5 entries. Switch to 'Stored Journal' to manage saved entries.")
+        else:
+            remove_journal_entry(selected_id)
+            st.success("Entry deleted.")
+            st.rerun()
 
 # 4. EDIT SELECTED ENTRY (text + images)
-if selected_id is not None:
+if selected_id is not None and data_source == "Stored Journal":
     entry = get_journal_entry(selected_id)
     if entry is not None:
         st.divider()
