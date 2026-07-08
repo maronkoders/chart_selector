@@ -1,0 +1,73 @@
+{
+  "profiles": {
+    "DerivVU": {
+      "terminal_path": "",
+      "login": "101239396",
+      "password": "Hyf@S23@5",
+      "server": "DerivVU-Server-02"
+    },
+    "DerivBVI": {
+      "terminal_path": "",
+      "login": "21419903",
+      "password": "Hyf@s23@5",
+      "server": "DerivBVI-Server"
+    },
+    "Zero Spread": {
+      "terminal_path": "",
+      "login": "80435161",
+      "password": "Hyf@s23@5",
+      "server": "DerivBVI-Server-02"
+    },
+    "Swap-free": {
+      "terminal_path": "",
+      "login": "80534217",
+      "password": "Hyf@S23@5",
+      "server": "DerivSVG-Server-02"
+    },
+    "FInancial": {
+      "terminal_path": "",
+      "login": "10196388",
+      "password": "Hyf@s23@5",
+      "server": "DerivBVI-Server"
+    },
+    "Main": {
+      "terminal_path": "",
+      "login": "100979130",
+      "password": "Hyf@s23@5",
+      "server": "DerivSVG-Server-02",
+      "trading_plan": "$1 challenge"
+    },
+    "Demo": {
+      "terminal_path": "",
+      "login": "6132229",
+      "password": "Hyf@s23@5",
+      "server": "Deriv-Demo"
+    },
+    "Weltrade": {
+      "terminal_path": "",
+      "login": "34083957",
+      "password": "+2Qw[Z8v",
+      "server": "Weltrade-Real"
+    }
+  },
+  "active_profile": "Main",
+  "risk": {
+    "account_size": 8.76,
+    "risk_percentage": 50.0
+  },
+  "trading_plans": {
+    "$1 challenge": {
+      "start_capital": 1.0,
+      "trading_days": 10,
+      "tp_percentage": 100.0,
+      "start_date": "2026-07-01",
+      "challenge_duration": 1,
+      "linked_profile": "Main"
+    }
+  },
+  "screenshot_monitor": {
+    "enabled": true,
+    "poll_interval": 60,
+    "auto_journal_on_close": true
+  }
+}

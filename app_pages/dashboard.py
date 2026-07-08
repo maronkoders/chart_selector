@@ -4,7 +4,7 @@ import streamlit as st
 
 from core import mt5_client
 from core.calendar_view import build_calendar_html
-from core.config import load_config
+from core.config import load_config, get_profile_plan, calculate_plan_progress
 from core.watchlist_store import load_watchlist
 
 st.title("📊 Dashboard")
@@ -38,6 +38,39 @@ if account:
     m4.metric("Free Margin", f"${account['margin_free']:,.2f}")
     floating_pnl = account["equity"] - account["balance"]
     m5.metric("Floating P/L", f"${floating_pnl:,.2f}")
+    
+    # Trading Plan Status
+    st.divider()
+    active_profile_name = cfg.get("active_profile")
+    if active_profile_name:
+        plan_name, plan_data = get_profile_plan(cfg, active_profile_name)
+        if plan_name and plan_data:
+            # Fetch trade history for current month for automatic tracking
+            today = dt.date.today()
+            month_start = dt.datetime.combine(today.replace(day=1), dt.time.min)
+            month_end = dt.datetime.combine(today.replace(day=28) + dt.timedelta(days=4), dt.time.min).replace(day=1) if today.month == 12 else dt.datetime.combine(today.replace(day=1), dt.time.min).replace(month=today.month + 1)
+            
+            trade_history = mt5_client.get_history_deals_df(month_start, month_end)
+            
+            progress = calculate_plan_progress(plan_data, account['balance'], trade_history)
+            
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col1:
+                st.markdown("### 📈 Trading Plan")
+            with col2:
+                st.markdown(f"**{plan_name}**")
+            with col3:
+                st.page_link("app_pages/trading_plan.py", label="View Plan →", icon="📊")
+            
+            # Display "Day X, Y days to final target" format - bold and centered
+            if progress['current_day'] > 0:
+                st.markdown(f"<div style='text-align: center;'><strong>Day {progress['current_day']}, {progress['remaining_days']} days to get to '${progress['final_balance']:,.2f}'</strong></div>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"<div style='text-align: center;'><strong>Plan starts on {progress['start_date'].strftime('%B %d, %Y')}</strong></div>", unsafe_allow_html=True)
+            
+            # Progress bar
+            progress_percent = (progress['current_day'] / progress['total_days']) * 100 if progress['total_days'] > 0 else 0
+            st.progress(progress_percent / 100)
 else:
     st.warning("Could not retrieve account info. Make sure you're logged in to a broker account.")
 

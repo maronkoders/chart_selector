@@ -1,4 +1,5 @@
 import math
+import re
 
 import streamlit as st
 import MetaTrader5 as mt5
@@ -17,6 +18,31 @@ INDEX_CLASS_KEYWORDS = [
     ("Step", "step"),
     ("Jump", "jump"),
 ]
+
+# Hybrid/blended instruments that don't behave like a "pure" index of their
+# named class — excluded from the scanner entirely (not just relabeled).
+# Matches e.g. "Vol over Crash 550", "Vol over Boom 500",
+# "Spot Up - Volatility Up Index", "Spot Down - Volatility Down Index",
+# "Skew Step Index".
+EXCLUDED_ASSET_KEYWORDS = ["vol over", "spot up", "spot down", "skew"]
+
+# Crash/Boom only come in these standard denominations — any other number
+# (or a Crash/Boom symbol with no number at all) is excluded.
+ALLOWED_CRASH_BOOM_NUMBERS = {"300", "500", "600", "900", "1000"}
+
+
+def is_asset_allowed(asset_name: str) -> bool:
+    name_lower = asset_name.lower()
+
+    if any(keyword in name_lower for keyword in EXCLUDED_ASSET_KEYWORDS):
+        return False
+
+    if "crash" in name_lower or "boom" in name_lower:
+        numbers = re.findall(r"\d+", asset_name)
+        if not numbers or numbers[0] not in ALLOWED_CRASH_BOOM_NUMBERS:
+            return False
+
+    return True
 
 
 def get_index_class(asset_name: str) -> str:
@@ -127,8 +153,10 @@ with st.status("Scanning synthetic indices...", expanded=True) as status:
         status.write("No symbols in group. Fetching all symbols...")
         symbols = mt5.symbols_get()
 
+    symbols = [s for s in (symbols or []) if is_asset_allowed(s.name)]
+
     if symbols:
-        status.write(f"Found {len(symbols)} symbols. Scanning risk metrics...")
+        status.write(f"Found {len(symbols)} symbols after filtering. Scanning risk metrics...")
     else:
         status.write("No symbols found from broker.")
         symbols = []
