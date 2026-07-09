@@ -40,11 +40,19 @@ def connect(cfg: dict) -> tuple[bool, str]:
 
 
 def ensure_connection(cfg: dict, force: bool = False) -> tuple[bool, str]:
-    """Connects once per Streamlit session unless force=True or not yet connected."""
-    if force or not st.session_state.get("mt5_connected"):
+    """Connects once per Streamlit session unless force=True, not yet connected,
+    or the active broker profile has changed since the last connect (e.g. the
+    user switched profiles in Settings) — in which case we always reconnect so
+    stale data from a previous account never leaks into later pages.
+    """
+    active_profile_name, _ = get_active_profile(cfg)
+    profile_changed = st.session_state.get("mt5_connected_profile") != active_profile_name
+
+    if force or profile_changed or not st.session_state.get("mt5_connected"):
         ok, msg = connect(cfg)
         st.session_state.mt5_connected = ok
         st.session_state.mt5_status_message = msg
+        st.session_state.mt5_connected_profile = active_profile_name if ok else None
         return ok, msg
     return True, st.session_state.get("mt5_status_message", "Connected.")
 
@@ -52,6 +60,7 @@ def ensure_connection(cfg: dict, force: bool = False) -> tuple[bool, str]:
 def disconnect() -> None:
     mt5.shutdown()
     st.session_state.mt5_connected = False
+    st.session_state.mt5_connected_profile = None
     st.session_state.mt5_status_message = "Disconnected."
 
 
@@ -82,6 +91,30 @@ def get_open_positions_df() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _deal_position_direction(d) -> str:
+    """Returns the ORIGINAL position's direction (Buy/Sell) for a deal.
+
+    A deal's own `type` reflects the action of that specific deal, not
+    necessarily the position it belongs to. Closing a Sell position requires
+    executing a Buy deal (and closing a Buy position requires a Sell deal),
+    so for closing deals (Entry OUT / OUT_BY) the raw type is the *opposite*
+    of the position's real direction and must be inverted. Opening deals
+    (Entry IN, or INOUT for hedged positions) already match the position's
+    direction directly.
+    """
+    if d.type == mt5.DEAL_TYPE_BUY:
+        raw = "Buy"
+    elif d.type == mt5.DEAL_TYPE_SELL:
+        raw = "Sell"
+    else:
+        return "Other"
+
+    is_closing = d.entry in (mt5.DEAL_ENTRY_OUT, mt5.DEAL_ENTRY_OUT_BY)
+    if is_closing:
+        return "Sell" if raw == "Buy" else "Buy"
+    return raw
+
+
 def get_history_deals_df(from_date, to_date) -> pd.DataFrame:
     deals = mt5.history_deals_get(from_date, to_date)
     if not deals:
@@ -89,19 +122,12 @@ def get_history_deals_df(from_date, to_date) -> pd.DataFrame:
 
     rows = []
     for d in deals:
-        if d.type == mt5.DEAL_TYPE_BUY:
-            deal_type = "Buy"
-        elif d.type == mt5.DEAL_TYPE_SELL:
-            deal_type = "Sell"
-        else:
-            deal_type = "Other"
-
         rows.append({
             "Ticket": d.ticket,
             "Order": d.order,
             "Time": pd.to_datetime(d.time, unit="s"),
             "Symbol": d.symbol,
-            "Type": deal_type,
+            "Type": _deal_position_direction(d),
             "Volume": d.volume,
             "Price": d.price,
             "Profit": d.profit,

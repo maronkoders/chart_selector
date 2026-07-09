@@ -1,112 +1,169 @@
-"""Trade journal persistence: manual entries plus import from MT5 history."""
+"""Per-trade annotations (notes + image attachments) keyed by MT5 ticket.
+
+Trade facts (date, asset, direction, lots, entry price, P/L) always come
+live from MT5 and are never stored here. This module only persists the
+notes and image attachments a user adds to a given trade — functionally a
+foreign-key table: entries_description(mt5_ticket FK, notes, images[]).
+"""
 import base64
 import json
+import os
 import uuid
 from pathlib import Path
 
 import streamlit as st
 
-JOURNAL_FILE = Path(__file__).resolve().parent.parent / "journal.json"
+from core.config import get_screenshot_folder
 
-# Keep attachments reasonable so journal.json doesn't balloon in size.
-MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB per image
+ENTRIES_DESCRIPTION_FILE = Path("entries_description.json")
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB limit for base64 fallback
 
-
-def load_journal() -> list[dict]:
-    if JOURNAL_FILE.exists():
-        try:
-            return json.loads(JOURNAL_FILE.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return []
-    return []
+EMPTY_DESCRIPTION = {"notes": "", "images": []}
 
 
-def save_journal(entries: list[dict]) -> None:
-    JOURNAL_FILE.write_text(json.dumps(entries, indent=2, default=str), encoding="utf-8")
+# ── ANNOTATIONS (notes + images), keyed by mt5_ticket ───────────────────────
+
+def init_entries_description() -> dict:
+    """Loads {ticket_str: {"notes": str, "images": [...]}} from disk once per session."""
+    if "entries_description" not in st.session_state:
+        if ENTRIES_DESCRIPTION_FILE.exists():
+            try:
+                data = json.loads(ENTRIES_DESCRIPTION_FILE.read_text(encoding="utf-8"))
+                st.session_state.entries_description = data if isinstance(data, dict) else {}
+            except (json.JSONDecodeError, OSError):
+                st.session_state.entries_description = {}
+        else:
+            st.session_state.entries_description = {}
+    return st.session_state.entries_description
 
 
-def init_journal() -> list[dict]:
-    if "journal" not in st.session_state:
-        st.session_state.journal = load_journal()
-    return st.session_state.journal
+def _save_entries_description() -> None:
+    ENTRIES_DESCRIPTION_FILE.write_text(
+        json.dumps(st.session_state.entries_description, indent=2), encoding="utf-8"
+    )
 
 
-def get_journal_entry(entry_id: str) -> dict | None:
-    for entry in st.session_state.journal:
-        if entry.get("id") == entry_id:
-            return entry
+def get_entry_description(ticket) -> dict:
+    """Returns {"notes": str, "images": [...]} for this ticket (empty default if none saved yet)."""
+    init_entries_description()
+    saved = st.session_state.entries_description.get(str(ticket))
+    if saved is None:
+        return dict(EMPTY_DESCRIPTION)
+    return {"notes": saved.get("notes", ""), "images": saved.get("images", [])}
+
+
+def save_entry_description(ticket, notes: str, images: list) -> None:
+    """Upserts the notes/images for a ticket — this is the only write path
+    for journal data now, so a save here always sticks (no separate
+    'is this a new row or existing row' branching needed).
+    """
+    init_entries_description()
+    st.session_state.entries_description[str(ticket)] = {"notes": notes, "images": images}
+    _save_entries_description()
+
+
+def clear_entry_description(ticket) -> None:
+    """Removes the annotation for a ticket and deletes any associated image files on disk."""
+    init_entries_description()
+    key = str(ticket)
+    existing = st.session_state.entries_description.get(key)
+    if existing:
+        for img in existing.get("images", []):
+            path = img.get("path")
+            if path and os.path.isfile(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+    st.session_state.entries_description.pop(key, None)
+    _save_entries_description()
+
+
+# ── IMAGE HELPERS (unchanged behavior — annotations own their images) ───────
+
+def _sanitize_filename(text: str) -> str:
+    safe = text.strip().replace(" ", "_")
+    unsafe = '\\/:*?"<>|'
+    for ch in unsafe:
+        safe = safe.replace(ch, "")
+    return safe
+
+
+def _build_image_filename(asset: str, direction: str, pnl: float, ext: str = "png") -> str:
+    safe_asset = _sanitize_filename(asset)
+    safe_dir = _sanitize_filename(direction).lower()
+    pnl_str = f"{pnl:+.2f}"
+    return f"{safe_asset}_{safe_dir}_{pnl_str}.{ext}"
+
+
+def _get_screenshot_dir() -> Path | None:
+    cfg = st.session_state.get("app_config", {})
+    folder = get_screenshot_folder(cfg)
+    if folder and os.path.isdir(folder):
+        return Path(folder)
     return None
 
 
-def add_journal_entry(entry: dict) -> None:
-    entry = dict(entry)
-    entry["id"] = entry.get("id") or uuid.uuid4().hex[:8]
-    entry.setdefault("images", [])
-    st.session_state.journal.append(entry)
-    save_journal(st.session_state.journal)
+def _ensure_screenshot_dir() -> Path:
+    configured = _get_screenshot_dir()
+    if configured:
+        return configured
+    return Path(".")  # fallback: save next to entries_description.json
 
 
-def update_journal_entry(entry_id: str, updates: dict) -> bool:
-    for entry in st.session_state.journal:
-        if entry.get("id") == entry_id:
-            entry.update(updates)
-            save_journal(st.session_state.journal)
-            return True
-    return False
-
-
-def remove_journal_entry(entry_id: str) -> None:
-    st.session_state.journal = [e for e in st.session_state.journal if e.get("id") != entry_id]
-    save_journal(st.session_state.journal)
-
-
-def encode_uploaded_image(uploaded_file) -> dict | None:
-    """Converts a Streamlit UploadedFile into a JSON-serializable base64 record."""
-    raw_bytes = uploaded_file.getvalue()
-    if len(raw_bytes) > MAX_IMAGE_BYTES:
+def encode_uploaded_image(uploaded_file, asset: str = None, direction: str = None, pnl: float = None) -> dict | None:
+    """Saves an uploaded image to the screenshot folder and returns metadata.
+    Falls back to inline base64 if the folder isn't writable.
+    """
+    raw = uploaded_file.read()
+    if len(raw) > MAX_IMAGE_BYTES:
         return None
-    return {
-        "id": uuid.uuid4().hex[:8],
-        "name": uploaded_file.name,
-        "mime": uploaded_file.type or "image/png",
-        "data": base64.b64encode(raw_bytes).decode("ascii"),
-    }
 
+    orig_name = uploaded_file.name
+    ext = Path(orig_name).suffix.lstrip(".").lower()
+    if ext not in ("png", "jpg", "jpeg", "gif", "webp"):
+        ext = "png"
 
-def decode_image_bytes(image_record: dict) -> bytes:
-    return base64.b64decode(image_record["data"])
+    screenshot_dir = _ensure_screenshot_dir()
 
+    if asset and direction is not None and pnl is not None:
+        contextual_name = _build_image_filename(asset, direction, pnl, ext)
+        dest_path = screenshot_dir / contextual_name
+        if dest_path.exists():
+            stem = dest_path.stem
+            suffix = dest_path.suffix
+            short_id = uuid.uuid4().hex[:6]
+            dest_path = screenshot_dir / f"{stem}_{short_id}{suffix}"
+    else:
+        dest_path = screenshot_dir / f"{uuid.uuid4().hex}.{ext}"
 
-def import_deals_as_entries(deals_df) -> int:
-    """Imports closing MT5 deals into the journal, skipping ones already imported (by ticket)."""
-    if deals_df is None or deals_df.empty:
-        return 0
-
-    existing_tickets = {
-        e.get("mt5_ticket") for e in st.session_state.journal if e.get("mt5_ticket")
-    }
-
-    imported = 0
-    for _, row in deals_df.iterrows():
-        ticket = row.get("Ticket")
-        if ticket in existing_tickets:
-            continue
-        entry = {
-            "id": uuid.uuid4().hex[:8],
-            "date": row["Time"].strftime("%Y-%m-%d %H:%M"),
-            "asset": row["Symbol"],
-            "direction": row["Type"],
-            "lots": float(row["Volume"]),
-            "entry_price": float(row["Price"]),
-            "exit_price": None,
-            "pnl": float(row["Profit"]),
-            "notes": "Imported from MT5 history",
-            "images": [],
-            "mt5_ticket": int(ticket),
+    try:
+        with open(dest_path, "wb") as f:
+            f.write(raw)
+    except OSError as e:
+        st.warning(f"Could not save image to disk ({e}); falling back to inline storage.")
+        return {
+            "name": orig_name,
+            "data": base64.b64encode(raw).decode("utf-8"),
+            "mime": uploaded_file.type,
+            "inline": True,
         }
-        st.session_state.journal.append(entry)
-        imported += 1
 
-    if imported:
-        save_journal(st.session_state.journal)
-    return imported
+    return {
+        "name": dest_path.name,
+        "path": str(dest_path),
+        "mime": uploaded_file.type,
+        "inline": False,
+    }
+
+
+def decode_image_bytes(img_record: dict) -> bytes:
+    if img_record.get("inline"):
+        return base64.b64decode(img_record["data"])
+    path = img_record.get("path")
+    if path and os.path.isfile(path):
+        return Path(path).read_bytes()
+    data = img_record.get("data")
+    if data:
+        return base64.b64decode(data)
+    return b""
