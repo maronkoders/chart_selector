@@ -3,8 +3,9 @@ import datetime as dt
 import streamlit as st
 
 from core import mt5_client
-from core.calendar_view import build_calendar_html
+from core.calendar_view import build_calendar_html, build_month_grid
 from core.config import load_config, get_profile_plan, calculate_plan_progress
+from core.plan_frequency import build_week_targets_for_grid
 from core.watchlist_store import load_watchlist
 
 st.title("📊 Dashboard")
@@ -29,6 +30,7 @@ if not ok:
     st.stop()
 
 account = mt5_client.get_account_info()
+active_plan_data = None  # populated below if the active profile has a linked plan
 
 if account:
     m1, m2, m3, m4, m5 = st.columns(5)
@@ -45,6 +47,7 @@ if account:
     if active_profile_name:
         plan_name, plan_data = get_profile_plan(cfg, active_profile_name)
         if plan_name and plan_data:
+            active_plan_data = plan_data
             # Fetch trade history for current month for automatic tracking
             today = dt.date.today()
             month_start = dt.datetime.combine(today.replace(day=1), dt.time.min)
@@ -146,7 +149,16 @@ if not deals_df.empty:
             for date_val, row in grouped.iterrows()
         }
 
-st.markdown(build_calendar_html(daily_stats, cal_year, cal_month), unsafe_allow_html=True)
+st.markdown(
+    build_calendar_html(
+        daily_stats,
+        cal_year,
+        cal_month,
+        week_targets=build_week_targets_for_grid(build_month_grid(cal_year, cal_month), active_plan_data),
+        freq_label="Planned" if active_plan_data else "Trades",
+    ),
+    unsafe_allow_html=True,
+)
 
 if daily_stats:
     total_pnl = sum(v["pnl"] for v in daily_stats.values())

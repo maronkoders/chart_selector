@@ -49,15 +49,33 @@ def build_month_grid(year: int, month: int) -> list[list[tuple[dt.date, bool]]]:
     return grid
 
 
-def build_calendar_html(daily_stats: dict, year: int, month: int) -> str:
-    """daily_stats: {date_obj: {"pnl": float, "count": int}}"""
+def build_calendar_html(
+    daily_stats: dict,
+    year: int,
+    month: int,
+    week_targets: list[int | None] | None = None,
+    freq_label: str = "Trades",
+) -> str:
+    """daily_stats: {date_obj: {"pnl": float, "count": int}}
+
+    week_targets: optional, one value per week row (same order as
+    build_month_grid). When provided, the right-hand frequency column shows
+    these *planned/suggested* values instead of summing actual trade counts
+    — e.g. a Trading Plan's weekly cadence (3, 3, 2, 2...). A None entry
+    means that week falls outside the plan's schedule, shown as "—".
+    When week_targets is None entirely, falls back to actual trade counts
+    (the original behavior).
+    """
     grid = build_month_grid(year, month)
 
     header_cells = "".join(f'<div class="cs-cal-head">{label}</div>' for label in WEEKDAY_LABELS)
+    header_cells += f'<div class="cs-cal-head cs-cal-freq-head">{html.escape(freq_label)}</div>'
 
     body_rows = []
-    for week in grid:
+    for week_idx, week in enumerate(grid):
         row_cells = []
+        week_trade_count = 0
+
         for day, in_month in week:
             if not in_month:
                 row_cells.append(
@@ -68,6 +86,7 @@ def build_calendar_html(daily_stats: dict, year: int, month: int) -> str:
             stats = daily_stats.get(day, {"pnl": 0.0, "count": 0})
             pnl = stats["pnl"]
             count = stats["count"]
+            week_trade_count += count
 
             if count == 0:
                 css_class = "cs-cal-empty"
@@ -89,16 +108,34 @@ def build_calendar_html(daily_stats: dict, year: int, month: int) -> str:
                 f'<div class="cs-cal-trades">{count} {trades_label}</div>'
                 f'</div>'
             )
+
+        # Weekly frequency summary cell, on the right of the row. Either the
+        # plan's suggested cadence for this week, or (if no plan is active)
+        # the actual sum of trades taken — never both at once.
+        if week_targets is not None:
+            target = week_targets[week_idx] if week_idx < len(week_targets) else None
+            freq_display = "—" if target is None else str(target)
+        else:
+            freq_display = str(week_trade_count)
+
+        row_cells.append(
+            f'<div class="cs-cal-freq-cell"><div class="cs-cal-freq-num">{freq_display}</div></div>'
+        )
+
         body_rows.append(f'<div class="cs-cal-row">{"".join(row_cells)}</div>')
 
     style = """
     <style>
     .cs-cal-wrapper { font-family: inherit; }
-    .cs-cal-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 8px; }
+    .cs-cal-row {
+        display: grid; grid-template-columns: repeat(7, 1fr) 90px;
+        gap: 8px; margin-bottom: 8px; align-items: stretch;
+    }
     .cs-cal-head {
         text-align: center; font-weight: 600; font-size: 0.85rem;
         color: #374151; padding-bottom: 4px;
     }
+    .cs-cal-freq-head { color: #1F2937; font-weight: 700; }
     .cs-cal-cell {
         border: 1px solid #E5E7EB; border-radius: 8px; min-height: 92px;
         padding: 8px 10px; box-sizing: border-box; position: relative;
@@ -114,6 +151,12 @@ def build_calendar_html(daily_stats: dict, year: int, month: int) -> str:
     .cs-cal-loss { background: #E0435A; color: #FFFFFF; border-color: #C23349; }
     .cs-cal-flat { background: #9CA3AF; color: #FFFFFF; border-color: #6B7280; }
     .cs-cal-pad { background: #FAFAFA; color: #9CA3AF; border-color: #F0F0F0; min-height: 92px; }
+    .cs-cal-freq-cell {
+        min-height: 92px; border: 1px dashed #D1D5DB; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        background: #F9FAFB; box-sizing: border-box;
+    }
+    .cs-cal-freq-num { font-size: 2.4rem; font-weight: 800; line-height: 1; color: #1F2937; }
     </style>
     """
 
