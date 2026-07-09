@@ -1,7 +1,6 @@
 import os
 import subprocess
 import sys
-import tempfile
 import streamlit as st
 
 from core import mt5_client
@@ -65,6 +64,7 @@ if folder:
         st.error(f"Could not open folder dialog: {e}")
         return None
 
+
 def open_folder_in_explorer(path: str) -> None:
     """Open the given folder in the OS file explorer."""
     try:
@@ -76,6 +76,7 @@ def open_folder_in_explorer(path: str) -> None:
             subprocess.run(["xdg-open", path], check=True)
     except Exception as e:
         st.error(f"Could not open folder: {e}")
+
 
 # ── SESSION STATE FOR FOLDER SELECTION ───────────────────────────────────────
 if "screenshot_folder_selected" not in st.session_state:

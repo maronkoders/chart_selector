@@ -65,6 +65,7 @@
       "linked_profile": "Main"
     }
   },
+  "screenshot_folder": "C:\\Users\\u\\Pictures\\chart_selector_images",
   "screenshot_monitor": {
     "enabled": true,
     "poll_interval": 60,
