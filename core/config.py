@@ -204,6 +204,15 @@ def calculate_plan_progress(plan: dict, current_balance: float = None, trade_his
     }
 
 
+def set_screenshot_folder(cfg: dict, folder_path: str) -> None:
+    """Save the screenshot folder path to config."""
+    cfg["screenshot_folder"] = os.path.normpath(folder_path)
+    save_config(cfg)
+
+def get_screenshot_folder(cfg: dict) -> str | None:
+    """Get the configured screenshot folder path."""
+    return cfg.get("screenshot_folder")
+
 def calculate_weekly_frequency(plan: dict, year: int, month: int) -> list:
     """Calculate weekly trading frequency distribution for a specific month.
     

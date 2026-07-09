@@ -23,143 +23,115 @@ st.title("📓 Trading Journal")
 
 cfg = st.session_state.setdefault("app_config", load_config())
 
-# Data source selection
-st.sidebar.header("Data Source")
-data_source = st.sidebar.radio(
-    "Select data source",
-    options=["Live MT5", "Stored Journal"],
-    index=0,
-    help="Live MT5 fetches current account history. Stored Journal uses saved journal.json entries."
-)
+# ── INITIALIZE JOURNAL STATE ─────────────────────────────────────────────────
+# Ensure session state has journal before any store operations
+init_journal()
 
-# Try to fetch live data from MT5 if connected
-mt5_data = None
+# ── WEEK NAVIGATION ──────────────────────────────────────────────────────────
+def get_week_start(date: dt.date) -> dt.date:
+    """Return Monday of the given date's week."""
+    return date - dt.timedelta(days=date.weekday())
+
+def get_week_end(date: dt.date) -> dt.date:
+    """Return Sunday of the given date's week."""
+    return date + dt.timedelta(days=6 - date.weekday())
+
+# Initialize current week in session state
+if "journal_week_start" not in st.session_state:
+    st.session_state.journal_week_start = get_week_start(dt.date.today())
+
+week_start = st.session_state.journal_week_start
+week_end = get_week_end(week_start)
+
+# Week navigation with arrows
+col_nav, col_label, col_empty = st.columns([1, 3, 1])
+with col_nav:
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("◀", key="prev_week", use_container_width=True):
+            st.session_state.journal_week_start = week_start - dt.timedelta(weeks=1)
+            st.rerun()
+    with c2:
+        if st.button("▶", key="next_week", use_container_width=True):
+            st.session_state.journal_week_start = week_start + dt.timedelta(weeks=1)
+            st.rerun()
+
+with col_label:
+    st.markdown(
+        f"<h3 style='text-align: center; margin: 0;'>{week_start.strftime('%b %d')} – {week_end.strftime('%b %d, %Y')}</h3>",
+        unsafe_allow_html=True,
+    )
+
+with col_empty:
+    if st.button("Today", key="this_week", use_container_width=True):
+        st.session_state.journal_week_start = get_week_start(dt.date.today())
+        st.rerun()
+
+# ── FETCH LIVE MT5 DATA ──────────────────────────────────────────────────────
+mt5_data = []
 mt5_error = None
-if data_source == "Live MT5":
-    try:
-        ok, msg = mt5_client.ensure_connection(cfg)
-        if ok:
-            to_date = dt.datetime.now()
-            from_date = to_date - dt.timedelta(days=30)  # Default to last 30 days
-            deals_df = mt5_client.get_history_deals_df(from_date, to_date)
-            if not deals_df.empty:
-                closing_deals = deals_df[deals_df["Entry"] == 1]
-                if not closing_deals.empty:
-                    # Convert MT5 deals to journal format
-                    mt5_data = []
-                    for _, row in closing_deals.iterrows():
-                        mt5_data.append({
-                            "id": str(row["Ticket"]),
-                            "date": row["Time"].strftime("%Y-%m-%d %H:%M"),
-                            "asset": row["Symbol"],
-                            "direction": row["Type"],
-                            "lots": float(row["Volume"]),
-                            "entry_price": float(row["Price"]),
-                            "exit_price": None,
-                            "pnl": float(row["Profit"]),
-                            "notes": "Live MT5 data",
-                            "images": [],
-                            "mt5_ticket": int(row["Ticket"]),
-                        })
-            else:
-                mt5_error = "No trade history found in MT5 for the selected period."
-        else:
-            mt5_error = f"MT5 connection failed: {msg}"
-    except Exception as e:
-        mt5_error = f"Could not fetch live MT5 data: {e}"
 
-# Use MT5 data if available and selected, otherwise fall back to stored journal
-if data_source == "Live MT5":
-    if mt5_data:
-        journal = mt5_data
-        st.sidebar.success(f"Showing {len(journal)} live trades from MT5")
-    else:
-        st.sidebar.error(mt5_error or "No MT5 data available")
-        journal = init_journal()
-        st.sidebar.info("Falling back to stored journal")
-else:
-    journal = init_journal()
-    st.sidebar.info(f"Showing {len(journal)} stored journal entries")
-
-# 1. IMPORT FROM MT5
-with st.expander("Import closed trades from MT5", expanded=False):
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        days_back = st.number_input("Days back", min_value=1, max_value=730, value=30)
-    with col2:
-        st.write("")
-        st.write("")
-        if st.button("Connect & Import", width="stretch"):
-            ok, msg = mt5_client.ensure_connection(cfg)
-            if not ok:
-                st.error(msg)
-            else:
-                to_date = dt.datetime.now()
-                from_date = to_date - dt.timedelta(days=int(days_back))
-                deals_df = mt5_client.get_history_deals_df(from_date, to_date)
-                closing_deals = deals_df[deals_df["Entry"] == 1] if not deals_df.empty else deals_df
-                count = import_deals_as_entries(closing_deals)
-                st.success(f"Imported {count} new closed trade(s).")
-                st.rerun()
-
-# 2. ADD MANUAL ENTRY
-if data_source == "Stored Journal":
-    with st.expander("Add manual journal entry", expanded=False):
-        watchlist_assets = sorted(load_watchlist())
-        with st.form("add_journal_entry_form", clear_on_submit=True):
-            c1, c2, c3 = st.columns(3)
-            date_val = c1.date_input("Date", value=dt.date.today())
-            asset_val = c2.text_input(
-                "Asset", placeholder=", ".join(watchlist_assets[:3]) if watchlist_assets else "e.g. Volatility 75 Index"
-            )
-            direction_val = c3.selectbox("Direction", options=["Buy", "Sell"])
-
-            c4, c5, c6 = st.columns(3)
-            lots_val = c4.number_input("Lots", min_value=0.0, step=0.01, value=0.01)
-            entry_price_val = c5.number_input("Entry Price", min_value=0.0, step=0.00001, format="%.5f")
-            exit_price_val = c6.number_input("Exit Price", min_value=0.0, step=0.00001, format="%.5f")
-
-            pnl_val = st.number_input("P/L ($)", value=0.0, step=0.01)
-            notes_val = st.text_area("Notes", placeholder="Setup, reasoning, lessons learned...")
-            image_uploads = st.file_uploader(
-                "Attach image(s) to notes",
-                type=IMAGE_TYPES,
-                accept_multiple_files=True,
-                key="add_entry_images",
-            )
-
-            submitted = st.form_submit_button("Add Entry", width="stretch")
-            if submitted:
-                if not asset_val.strip():
-                    st.warning("Asset is required.")
-                else:
-                    images = []
-                    for uploaded in image_uploads or []:
-                        record = encode_uploaded_image(uploaded)
-                        if record is None:
-                            st.warning(f"Skipped '{uploaded.name}' — over the 5 MB attachment limit.")
-                        else:
-                            images.append(record)
-
-                    add_journal_entry({
-                        "date": date_val.strftime("%Y-%m-%d"),
-                        "asset": asset_val.strip(),
-                        "direction": direction_val,
-                        "lots": lots_val,
-                        "entry_price": entry_price_val,
-                        "exit_price": exit_price_val,
-                        "pnl": pnl_val,
-                        "notes": notes_val.strip(),
-                        "images": images,
+try:
+    ok, msg = mt5_client.ensure_connection(cfg)
+    if ok:
+        from_date = dt.datetime.combine(week_start, dt.time.min)
+        to_date = dt.datetime.combine(week_end, dt.time.max)
+        deals_df = mt5_client.get_history_deals_df(from_date, to_date)
+        if not deals_df.empty:
+            closing_deals = deals_df[deals_df["Entry"] == 1]
+            if not closing_deals.empty:
+                for _, row in closing_deals.iterrows():
+                    mt5_data.append({
+                        "id": str(row["Ticket"]),
+                        "date": row["Time"].strftime("%Y-%m-%d %H:%M"),
+                        "asset": row["Symbol"],
+                        "direction": row["Type"],
+                        "lots": float(row["Volume"]),
+                        "entry_price": float(row["Price"]),
+                        "exit_price": None,
+                        "pnl": float(row["Profit"]),
+                        "notes": "Live MT5 data",
+                        "images": [],
+                        "mt5_ticket": int(row["Ticket"]),
                     })
-                    st.success("Entry added.")
-                    st.rerun()
+            else:
+                mt5_error = "No closing deals found for this week."
+        else:
+            mt5_error = "No trade history found in MT5 for the selected week."
+    else:
+        mt5_error = f"MT5 connection failed: {msg}"
+except Exception as e:
+    mt5_error = f"Could not fetch live MT5 data: {e}"
 
-st.divider()
+# ── IMPORT FROM MT5 (sidebar action) ─────────────────────────────────────────
+with st.sidebar:
+    st.header("Actions")
+    days_back = st.number_input("Import days back", min_value=1, max_value=730, value=7)
+    if st.button("📥 Import from MT5", use_container_width=True):
+        ok, msg = mt5_client.ensure_connection(cfg)
+        if not ok:
+            st.error(msg)
+        else:
+            to_date = dt.datetime.now()
+            from_date = to_date - dt.timedelta(days=int(days_back))
+            deals_df = mt5_client.get_history_deals_df(from_date, to_date)
+            closing_deals = deals_df[deals_df["Entry"] == 1] if not deals_df.empty else deals_df
+            count = import_deals_as_entries(closing_deals)
+            st.success(f"Imported {count} new closed trade(s).")
+            st.rerun()
 
-# 3. FILTERS + TABLE + STATS
+    if mt5_data:
+        st.success(f"Showing {len(mt5_data)} live trades")
+    elif mt5_error:
+        st.error(mt5_error)
+        st.info("Showing empty journal")
+
+# Use MT5 data for the week
+journal = mt5_data
+
+# ── STATS ────────────────────────────────────────────────────────────────────
 if not journal:
-    st.info("No journal entries yet. Add one manually or import from MT5 above.")
+    st.info("No trades found for this week. Use the arrows to browse other weeks, or check your MT5 connection.")
     st.stop()
 
 df = pd.DataFrame(journal)
@@ -170,44 +142,15 @@ if "images" not in df.columns:
 df["images"] = df["images"].apply(lambda v: v if isinstance(v, list) else [])
 df["image_count"] = df["images"].apply(len)
 
-assets_available = sorted(df["asset"].dropna().unique())
-directions_available = sorted(df["direction"].dropna().unique())
+df = df.sort_values("date", ascending=False).reset_index(drop=True)
 
-f1, f2, f3 = st.columns(3)
-with f1:
-    asset_filter = st.multiselect("Filter by asset", options=assets_available, default=[])
-with f2:
-    direction_filter = st.multiselect("Filter by direction", options=directions_available, default=[])
-with f3:
-    date_range = st.date_input(
-        "Date range",
-        value=(df["date"].min().date(), df["date"].max().date()),
-    )
-
-df_filtered = df.copy()
-if asset_filter:
-    df_filtered = df_filtered[df_filtered["asset"].isin(asset_filter)]
-if direction_filter:
-    df_filtered = df_filtered[df_filtered["direction"].isin(direction_filter)]
-if isinstance(date_range, tuple) and len(date_range) == 2:
-    start_date, end_date = date_range
-    df_filtered = df_filtered[
-        (df_filtered["date"].dt.date >= start_date) & (df_filtered["date"].dt.date <= end_date)
-    ]
-
-df_filtered = df_filtered.sort_values("date", ascending=False).reset_index(drop=True)
-
-if df_filtered.empty:
-    st.info("No journal entries match your filters.")
-    st.stop()
-
-total_trades = len(df_filtered)
-win_trades = int((df_filtered["pnl"] > 0).sum())
-loss_trades = int((df_filtered["pnl"] < 0).sum())
+total_trades = len(df)
+win_trades = int((df["pnl"] > 0).sum())
+loss_trades = int((df["pnl"] < 0).sum())
 win_rate = (win_trades / total_trades * 100) if total_trades else 0.0
-total_pnl = df_filtered["pnl"].sum()
-avg_win = df_filtered.loc[df_filtered["pnl"] > 0, "pnl"].mean() if win_trades else 0.0
-avg_loss = df_filtered.loc[df_filtered["pnl"] < 0, "pnl"].mean() if loss_trades else 0.0
+total_pnl = df["pnl"].sum()
+avg_win = df.loc[df["pnl"] > 0, "pnl"].mean() if win_trades else 0.0
+avg_loss = df.loc[df["pnl"] < 0, "pnl"].mean() if loss_trades else 0.0
 
 s1, s2, s3, s4, s5 = st.columns(5)
 s1.metric("Total Trades", total_trades)
@@ -216,104 +159,106 @@ s3.metric("Net P/L", f"${total_pnl:,.2f}")
 s4.metric("Avg Win", f"${avg_win:,.2f}")
 s5.metric("Avg Loss", f"${avg_loss:,.2f}")
 
+st.divider()
+
+# ── ENTRIES TABLE ────────────────────────────────────────────────────────────
 st.subheader("Entries")
+
+# Display table
 display_columns = ["date", "asset", "direction", "lots", "entry_price", "exit_price", "pnl", "image_count", "notes"]
 column_labels = {"image_count": "Images"}
+
 row_height = 35
 header_height = 38
-table_height = min(len(df_filtered), 15) * row_height + header_height
+table_height = min(len(df), 15) * row_height + header_height
 
-table_key = f"journal_table_{len(df_filtered)}_{hash(tuple(asset_filter))}_{hash(tuple(direction_filter))}"
-
-table_selection = st.dataframe(
-    df_filtered[display_columns].rename(columns=column_labels),
+st.dataframe(
+    df[display_columns].rename(columns=column_labels),
     hide_index=True,
-    width="stretch",
+    use_container_width=True,
     height=table_height,
-    on_select="rerun",
-    selection_mode="single-row",
-    key=table_key,
 )
 
-selected_rows = table_selection.selection.rows if table_selection.selection is not None else []
-selected_id = None
-if selected_rows:
-    row_idx = selected_rows[0]
-    if 0 <= row_idx < len(df_filtered):
-        selected_id = df_filtered.iloc[row_idx]["id"]
+st.divider()
 
-action_col, _ = st.columns([2, 4])
-with action_col:
-    # Disable delete for live MT5 data
-    delete_disabled = selected_id is None or data_source == "Live MT5"
-    if st.button("🗑️ Delete selected entry", disabled=delete_disabled, width="stretch"):
-        if data_source == "Live MT5":
-            st.warning("Cannot delete live MT5 entries. Switch to 'Stored Journal' to manage saved entries.")
-        else:
-            remove_journal_entry(selected_id)
-            st.success("Entry deleted.")
-            st.rerun()
+# ── INLINE EDIT PER ROW ──────────────────────────────────────────────────────
+st.subheader("✏️ Edit Entries")
 
-# 4. EDIT SELECTED ENTRY (text + images)
-if selected_id is not None and data_source == "Stored Journal":
-    entry = get_journal_entry(selected_id)
-    if entry is not None:
-        st.divider()
-        st.subheader(f"✏️ Edit Entry — {entry.get('asset', '')} ({entry.get('date', '')})")
-
-        existing_images = entry.get("images") or []
-
-        with st.form(f"edit_journal_form_{selected_id}"):
+for idx, row in df.iterrows():
+    entry_id = row["id"]
+    
+    # Build entry dict from row data (live MT5 data won't be in stored journal yet)
+    entry = {
+        "id": entry_id,
+        "date": row["date"].strftime("%Y-%m-%d") if pd.notna(row["date"]) else dt.date.today().strftime("%Y-%m-%d"),
+        "asset": row["asset"],
+        "direction": row["direction"],
+        "lots": row["lots"],
+        "entry_price": row["entry_price"],
+        "exit_price": row["exit_price"],
+        "pnl": row["pnl"],
+        "notes": row["notes"],
+        "images": row["images"],
+        "mt5_ticket": row.get("mt5_ticket"),
+    }
+    
+    # Color-code the expander based on P/L
+    pnl_color = "🟢" if row["pnl"] > 0 else "🔴" if row["pnl"] < 0 else "⚪"
+    
+    with st.expander(f"{pnl_color} {row['asset']} | {row['direction']} | {row['date'].strftime('%Y-%m-%d %H:%M') if pd.notna(row['date']) else 'N/A'} | P/L: ${row['pnl']:,.2f}", expanded=False):
+        
+        with st.form(f"edit_row_{entry_id}_{idx}"):
             try:
                 default_date = dt.datetime.strptime(str(entry.get("date", "")), "%Y-%m-%d").date()
             except ValueError:
                 default_date = dt.date.today()
 
             e1, e2, e3 = st.columns(3)
-            date_edit = e1.date_input("Date", value=default_date, key=f"edit_date_{selected_id}")
-            asset_edit = e2.text_input("Asset", value=entry.get("asset", ""), key=f"edit_asset_{selected_id}")
+            date_edit = e1.date_input("Date", value=default_date, key=f"date_{entry_id}_{idx}")
+            asset_edit = e2.text_input("Asset", value=entry.get("asset", ""), key=f"asset_{entry_id}_{idx}")
             direction_edit = e3.selectbox(
                 "Direction",
                 options=["Buy", "Sell"],
                 index=0 if entry.get("direction") != "Sell" else 1,
-                key=f"edit_direction_{selected_id}",
+                key=f"direction_{entry_id}_{idx}",
             )
 
             e4, e5, e6 = st.columns(3)
             lots_edit = e4.number_input(
                 "Lots", min_value=0.0, step=0.01,
-                value=float(entry.get("lots") or 0.0), key=f"edit_lots_{selected_id}",
+                value=float(entry.get("lots") or 0.0), key=f"lots_{entry_id}_{idx}",
             )
             entry_price_edit = e5.number_input(
                 "Entry Price", min_value=0.0, step=0.00001, format="%.5f",
-                value=float(entry.get("entry_price") or 0.0), key=f"edit_entry_price_{selected_id}",
+                value=float(entry.get("entry_price") or 0.0), key=f"entry_price_{entry_id}_{idx}",
             )
             exit_price_val = entry.get("exit_price")
             exit_price_edit = e6.number_input(
                 "Exit Price", min_value=0.0, step=0.00001, format="%.5f",
                 value=float(exit_price_val) if exit_price_val is not None else 0.0,
-                key=f"edit_exit_price_{selected_id}",
+                key=f"exit_price_{entry_id}_{idx}",
             )
 
             pnl_edit = st.number_input(
-                "P/L ($)", value=float(entry.get("pnl") or 0.0), step=0.01, key=f"edit_pnl_{selected_id}"
+                "P/L ($)", value=float(entry.get("pnl") or 0.0), step=0.01, key=f"pnl_{entry_id}_{idx}"
             )
             notes_edit = st.text_area(
-                "Notes", value=entry.get("notes", ""), key=f"edit_notes_{selected_id}"
+                "Notes", value=entry.get("notes", ""), key=f"notes_{entry_id}_{idx}"
             )
 
+            existing_images = entry.get("images") or []
             if existing_images:
                 st.write("Current images (select any to remove):")
                 remove_choices = st.multiselect(
                     "Remove image(s)",
                     options=[img["name"] for img in existing_images],
-                    key=f"edit_remove_images_{selected_id}",
+                    key=f"remove_images_{entry_id}_{idx}",
                     label_visibility="collapsed",
                 )
                 thumb_cols = st.columns(min(4, len(existing_images)))
                 for i, img in enumerate(existing_images):
                     with thumb_cols[i % len(thumb_cols)]:
-                        st.image(decode_image_bytes(img), caption=img["name"], width="stretch")
+                        st.image(decode_image_bytes(img), caption=img["name"], use_container_width=True)
             else:
                 remove_choices = []
                 st.caption("No images attached yet.")
@@ -322,12 +267,12 @@ if selected_id is not None and data_source == "Stored Journal":
                 "Add image(s) to notes",
                 type=IMAGE_TYPES,
                 accept_multiple_files=True,
-                key=f"edit_new_images_{selected_id}",
+                key=f"new_images_{entry_id}_{idx}",
             )
 
-            save_col, cancel_col = st.columns(2)
-            save_clicked = save_col.form_submit_button("💾 Save Changes", width="stretch")
-            cancel_clicked = cancel_col.form_submit_button("Cancel", width="stretch")
+            save_col, delete_col = st.columns(2)
+            save_clicked = save_col.form_submit_button("💾 Save Changes", use_container_width=True)
+            delete_clicked = delete_col.form_submit_button("🗑️ Delete Entry", use_container_width=True)
 
             if save_clicked:
                 if not asset_edit.strip():
@@ -342,7 +287,7 @@ if selected_id is not None and data_source == "Stored Journal":
                         else:
                             new_images.append(record)
 
-                    update_journal_entry(selected_id, {
+                    update_journal_entry(entry_id, {
                         "date": date_edit.strftime("%Y-%m-%d"),
                         "asset": asset_edit.strip(),
                         "direction": direction_edit,
@@ -356,5 +301,7 @@ if selected_id is not None and data_source == "Stored Journal":
                     st.success("Entry updated.")
                     st.rerun()
 
-            if cancel_clicked:
+            if delete_clicked:
+                remove_journal_entry(entry_id)
+                st.success("Entry deleted.")
                 st.rerun()

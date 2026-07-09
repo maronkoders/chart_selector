@@ -1,3 +1,7 @@
+import os
+import subprocess
+import sys
+import tempfile
 import streamlit as st
 
 from core import mt5_client
@@ -9,6 +13,7 @@ from core.config import (
     set_risk_params,
     link_plan_to_profile,
     unlink_plan_from_profile,
+    set_screenshot_folder,
 )
 
 st.title("⚙️ Settings")
@@ -22,8 +27,62 @@ st.info(
     icon="🔒",
 )
 
+# ── HELPER: Open Folder Dialog via Subprocess ────────────────────────────────
+def open_folder_dialog_subprocess() -> str | None:
+    """
+    Open a native folder picker by spawning a separate Python process.
+    This avoids tkinter's 'main thread is not in main loop' error.
+    """
+    dialog_script = '''
+import tkinter as tk
+from tkinter import filedialog
+import sys
+
+root = tk.Tk()
+root.withdraw()
+root.attributes('-topmost', True)
+
+folder = filedialog.askdirectory(title="Select Screenshot Folder", mustexist=True)
+root.destroy()
+
+if folder:
+    print(folder, end='')
+'''
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", dialog_script],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return os.path.normpath(result.stdout.strip())
+        return None
+    except subprocess.TimeoutExpired:
+        st.error("Folder dialog timed out.")
+        return None
+    except Exception as e:
+        st.error(f"Could not open folder dialog: {e}")
+        return None
+
+def open_folder_in_explorer(path: str) -> None:
+    """Open the given folder in the OS file explorer."""
+    try:
+        if sys.platform == "win32":
+            os.startfile(path)
+        elif sys.platform == "darwin":
+            subprocess.run(["open", path], check=True)
+        else:
+            subprocess.run(["xdg-open", path], check=True)
+    except Exception as e:
+        st.error(f"Could not open folder: {e}")
+
+# ── SESSION STATE FOR FOLDER SELECTION ───────────────────────────────────────
+if "screenshot_folder_selected" not in st.session_state:
+    st.session_state.screenshot_folder_selected = None
+
 # Secondary navigation tabs
-tab1, tab2 = st.tabs(["Broker Profiles", "Risk Parameters"])
+tab1, tab2, tab3 = st.tabs(["Broker Profiles", "Risk Parameters", "Screenshot Folder"])
 
 # Tab 1: Broker Profiles
 with tab1:
@@ -98,15 +157,15 @@ with tab1:
                     else:
                         st.caption("No plans available")
                 with c3:
-                    if st.button("✏️ Edit", key=f"edit_{name}", width="stretch"):
+                    if st.button("✏️ Edit", key=f"edit_{name}", use_container_width=True):
                         st.session_state[f"edit_profile_{name}"] = True
                         st.rerun()
                 with c4:
-                    if st.button("🟢 Set Active", key=f"activate_{name}", disabled=name == active_name, width="stretch"):
+                    if st.button("🟢 Set Active", key=f"activate_{name}", disabled=name == active_name, use_container_width=True):
                         set_active_profile(cfg, name)
                         st.rerun()
                 with c5:
-                    if st.button("🗑️ Delete", key=f"delete_{name}", width="stretch"):
+                    if st.button("🗑️ Delete", key=f"delete_{name}", use_container_width=True):
                         delete_profile(cfg, name)
                         st.rerun()
     else:
@@ -119,7 +178,6 @@ with tab1:
     for name in profiles.keys():
         if st.session_state.get(f"edit_profile_{name}"):
             editing_profile = name
-            # Clear the edit state after detecting it
             st.session_state[f"edit_profile_{name}"] = False
             break
     
@@ -155,7 +213,7 @@ with tab1:
             server = st.text_input("Server", placeholder="e.g. Deriv-Server")
             form_button_label = "Save Profile"
     
-        submitted = st.form_submit_button(form_button_label, width="stretch")
+        submitted = st.form_submit_button(form_button_label, use_container_width=True)
         if submitted:
             if not profile_name.strip():
                 st.warning("Profile name is required.")
@@ -169,13 +227,13 @@ with tab1:
                 st.rerun()
     
     if editing_profile:
-        if st.button("Cancel Edit", width="stretch"):
+        if st.button("Cancel Edit", use_container_width=True):
             st.rerun()
     
     st.divider()
     
     st.subheader("Test Connection")
-    if st.button("🔌 Test Connection with Active Profile", width="stretch"):
+    if st.button("🔌 Test Connection with Active Profile", use_container_width=True):
         ok, msg = mt5_client.ensure_connection(cfg, force=True)
         if ok:
             st.success(msg)
@@ -200,6 +258,68 @@ with tab2:
             "Risk Tolerance (%)", min_value=1.0, max_value=100.0, value=float(cfg["risk"]["risk_percentage"])
         )
     
-    if st.button("Save Risk Defaults", width="stretch"):
+    if st.button("Save Risk Defaults", use_container_width=True):
         set_risk_params(cfg, account_size, risk_percentage)
         st.success("Risk defaults saved.")
+
+# Tab 3: Screenshot Folder ─────────────────────────────────────────────────────
+with tab3:
+    st.subheader("📁 Screenshot Folder")
+    st.caption(
+        "Set the folder where all uploaded screenshots and images will be saved. "
+        "This path is used across the app (Journal, Trading Plan, etc.)."
+    )
+    
+    current_folder = cfg.get("screenshot_folder", "")
+    
+    # Display current path
+    if current_folder and os.path.isdir(current_folder):
+        st.success(f"**Current folder:** `{current_folder}`")
+    elif current_folder:
+        st.warning(f"**Current folder:** `{current_folder}` (folder not found)")
+    else:
+        st.info("No screenshot folder set. Select one below.")
+    
+    # Handle folder selection from dialog
+    if st.session_state.screenshot_folder_selected:
+        selected = st.session_state.screenshot_folder_selected
+        st.session_state.screenshot_folder_selected = None  # Clear after use
+        set_screenshot_folder(cfg, selected)
+        st.success(f"Folder selected: `{selected}`")
+        st.rerun()
+    
+    # Folder selection UI
+    c1, c2, c3 = st.columns([2, 1, 1])
+    
+    with c1:
+        manual_path = st.text_input(
+            "Folder path",
+            value=current_folder,
+            placeholder=r"C:\Users\YourName\Pictures\Screenshots",
+            label_visibility="collapsed",
+            key="screenshot_path_input",
+        )
+    
+    with c2:
+        if st.button("📂 Open Folder", use_container_width=True, key="open_folder_btn"):
+            selected = open_folder_dialog_subprocess()
+            if selected:
+                st.session_state.screenshot_folder_selected = selected
+                st.rerun()
+    
+    with c3:
+        if current_folder and os.path.isdir(current_folder):
+            if st.button("👁️ View in Explorer", use_container_width=True, key="view_folder_btn"):
+                open_folder_in_explorer(current_folder)
+        else:
+            st.button("👁️ View in Explorer", use_container_width=True, disabled=True, key="view_folder_btn_disabled")
+    
+    # Save manual path
+    if manual_path != current_folder:
+        if st.button("💾 Save Path", use_container_width=True, key="save_manual_path"):
+            if os.path.isdir(manual_path):
+                set_screenshot_folder(cfg, manual_path)
+                st.success(f"Screenshot folder saved: `{manual_path}`")
+                st.rerun()
+            else:
+                st.error("The specified path does not exist. Please create the folder first or use the Open Folder button.")
