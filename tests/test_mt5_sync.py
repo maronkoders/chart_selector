@@ -132,7 +132,7 @@ def test_filter_assets_from_exports_keeps_one_directional_bias(tmp_path):
     assert "Jump 75 Index" in result["rejected_assets"]
     assert result["reasons"]["Jump 75 Index"] == "mixed timeframe biases"
     assert result["reasons"]["Volatility 25 (1s) Index"] == "missing/neutral bias"
-    assert result["reasons"]["Volatility 15 (1s) Index"] == "no export file"
+    assert result["reasons"]["Volatility 15 (1s) Index"] == "no bias data"
 
 
 def test_get_export_directions_returns_aligned_only(tmp_path):

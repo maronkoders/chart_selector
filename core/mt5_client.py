@@ -53,6 +53,18 @@ def ensure_connection(cfg: dict, force: bool = False) -> tuple[bool, str]:
         st.session_state.mt5_connected = ok
         st.session_state.mt5_status_message = msg
         st.session_state.mt5_connected_profile = active_profile_name if ok else None
+        if profile_changed:
+            # Drop broker-specific scan state so Indices Advisor rescans the new account.
+            for key in (
+                "asset_data",
+                "velocity_cache",
+                "asset_directions",
+                "hidden_assets",
+                "hidden_assets_profile",
+                "asset_page",
+                "asset_filter_key",
+            ):
+                st.session_state.pop(key, None)
         return ok, msg
     return True, st.session_state.get("mt5_status_message", "Connected.")
 

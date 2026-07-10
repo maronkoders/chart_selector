@@ -4,55 +4,104 @@
       "terminal_path": "",
       "login": "101239396",
       "password": "Hyf@S23@5",
-      "server": "DerivVU-Server-02"
+      "server": "DerivVU-Server-02",
+      "broker_type": "deriv_synthetics",
+      "features": {
+        "indices_advisor": true,
+        "bias_filter": true,
+        "bias_source": "auto"
+      }
     },
     "DerivBVI": {
       "terminal_path": "",
       "login": "21419903",
       "password": "Hyf@s23@5",
-      "server": "DerivBVI-Server"
+      "server": "DerivBVI-Server",
+      "broker_type": "deriv_synthetics",
+      "features": {
+        "indices_advisor": true,
+        "bias_filter": true,
+        "bias_source": "auto"
+      }
     },
     "Zero Spread": {
       "terminal_path": "",
       "login": "80435161",
       "password": "Hyf@s23@5",
-      "server": "DerivBVI-Server-02"
+      "server": "DerivBVI-Server-02",
+      "broker_type": "deriv_synthetics",
+      "features": {
+        "indices_advisor": true,
+        "bias_filter": true,
+        "bias_source": "auto"
+      }
     },
     "Swap-free": {
       "terminal_path": "",
       "login": "80534217",
       "password": "Hyf@S23@5",
-      "server": "DerivSVG-Server-02"
+      "server": "DerivSVG-Server-02",
+      "broker_type": "deriv_synthetics",
+      "features": {
+        "indices_advisor": true,
+        "bias_filter": true,
+        "bias_source": "auto"
+      }
     },
     "FInancial": {
       "terminal_path": "",
       "login": "10196388",
       "password": "Hyf@s23@5",
-      "server": "DerivBVI-Server"
+      "server": "DerivBVI-Server",
+      "broker_type": "deriv_synthetics",
+      "features": {
+        "indices_advisor": true,
+        "bias_filter": true,
+        "bias_source": "auto"
+      }
     },
     "Main": {
       "terminal_path": "",
       "login": "100979130",
       "password": "Hyf@s23@5",
       "server": "DerivSVG-Server-02",
-      "trading_plan": "$1 challenge"
+      "trading_plan": "$1 challenge",
+      "broker_type": "deriv_synthetics",
+      "features": {
+        "indices_advisor": true,
+        "bias_filter": true,
+        "bias_source": "auto"
+      }
     },
     "Demo": {
       "terminal_path": "",
       "login": "6132229",
       "password": "Hyf@s23@5",
-      "server": "Deriv-Demo"
+      "server": "Deriv-Demo",
+      "broker_type": "deriv_synthetics",
+      "features": {
+        "indices_advisor": true,
+        "bias_filter": true,
+        "bias_source": "auto"
+      }
     },
     "Weltrade": {
       "terminal_path": "",
       "login": "34083957",
       "password": "+2Qw[Z8v",
-      "server": "Weltrade-Real"
+      "server": "Weltrade-Real",
+      "broker_type": "weltrade_synthetics",
+      "features": {
+        "indices_advisor": true,
+        "bias_filter": true,
+        "bias_source": "auto"
+      },
+      "trading_plan": "40%"
     }
   },
-  "active_profile": "Main",
+  "active_profile": "Weltrade",
   "risk": {
-    "account_size": 3.74,
+    "account_size": 6.89,
     "risk_percentage": 50.0
   },
   "trading_plans": {
@@ -63,6 +112,14 @@
       "start_date": "2026-07-01",
       "challenge_duration": 1,
       "linked_profile": "Main"
+    },
+    "40%": {
+      "start_capital": 10.0,
+      "trading_days": 30,
+      "tp_percentage": 40.0,
+      "start_date": "2026-07-01",
+      "challenge_duration": 3,
+      "linked_profile": "Weltrade"
     }
   },
   "screenshot_folder": "C:\\Users\\u\\Pictures\\chart_selector_images",

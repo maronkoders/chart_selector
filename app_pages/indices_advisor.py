@@ -7,7 +7,15 @@ import pandas as pd
 
 from core.mt5_sync import sync_assets, filter_assets_from_exports, get_export_directions
 from core import mt5_client
-from core.config import load_config, set_risk_params
+from core.config import load_config, set_risk_params, get_active_profile
+from core.broker_universe import (
+    get_profile_broker_type,
+    get_profile_universe,
+    get_profile_features,
+    is_symbol_allowed,
+    get_index_class as universe_index_class,
+    advisor_title,
+)
 from core.hidden_assets_store import (
     init_hidden_assets,
     hide_asset,
@@ -103,33 +111,38 @@ INDEX_CLASS_KEYWORDS = [
     ("Jump", "jump"),
 ]
 
-# Hybrid/blended instruments that don't behave like a "pure" index of their
-# named class — excluded from the scanner entirely (not just relabeled).
-# Matches e.g. "Vol over Crash 550", "Vol over Boom 500",
-# "Spot Up - Volatility Up Index", "Spot Down - Volatility Down Index",
-# "Skew Step Index".
-EXCLUDED_ASSET_KEYWORDS = ["vol over", "spot up", "spot down", "skew"]
 
-# Crash/Boom only come in these standard denominations — any other number
-# (or a Crash/Boom symbol with no number at all) is excluded.
-ALLOWED_CRASH_BOOM_NUMBERS = {"300", "500", "600", "900", "1000"}
+def discover_symbols(universe: dict):
+    """Fetch MT5 symbols for the active broker universe."""
+    groups = universe.get("mt5_groups") or ["*"]
+    found = []
+    seen = set()
+    for group in groups:
+        batch = mt5.symbols_get(group=group)
+        if not batch and group != "*":
+            continue
+        for sym in batch or []:
+            if sym.name in seen:
+                continue
+            seen.add(sym.name)
+            path = getattr(sym, "path", "") or ""
+            if is_symbol_allowed(sym.name, path, universe):
+                found.append(sym)
+
+    if not found and groups != ["*"]:
+        # Last resort: scan all symbols through the same allow rules.
+        for sym in mt5.symbols_get() or []:
+            if sym.name in seen:
+                continue
+            path = getattr(sym, "path", "") or ""
+            if is_symbol_allowed(sym.name, path, universe):
+                found.append(sym)
+    return found
 
 
-def is_asset_allowed(asset_name: str) -> bool:
-    name_lower = asset_name.lower()
-
-    if any(keyword in name_lower for keyword in EXCLUDED_ASSET_KEYWORDS):
-        return False
-
-    if "crash" in name_lower or "boom" in name_lower:
-        numbers = re.findall(r"\d+", asset_name)
-        if not numbers or numbers[0] not in ALLOWED_CRASH_BOOM_NUMBERS:
-            return False
-
-    return True
-
-
-def get_index_class(asset_name: str) -> str:
+def get_index_class(asset_name: str, universe: dict | None = None) -> str:
+    if universe:
+        return universe_index_class(asset_name, universe)
     name_lower = asset_name.lower()
     for label, keyword in INDEX_CLASS_KEYWORDS:
         if keyword in name_lower:
@@ -160,8 +173,6 @@ def render_sidebar_hidden_assets(hidden_assets: set[str]) -> None:
         st.rerun()
 
 
-st.title("🎯 Deriv Synthetic Indices Advisor")
-
 cfg = st.session_state.setdefault("app_config", load_config())
 
 # 1. CONNECT TO MT5 first — Account Balance below is read live from this connection.
@@ -170,6 +181,14 @@ if not ok:
     st.error(msg)
     st.page_link("app_pages/settings.py", label="Configure broker login in Settings →", icon="⚙️")
     st.stop()
+
+profile_name, profile = get_active_profile(cfg)
+broker_type = get_profile_broker_type(profile_name, profile)
+universe = get_profile_universe(profile_name, profile)
+features = get_profile_features(profile)
+st.title(advisor_title(broker_type))
+if profile_name:
+    st.caption(f"Profile: {profile_name} · {broker_type.replace('_', ' ')}")
 
 # 2. SIDEBAR RISK INPUTS (persisted to broker_config.json so Dashboard/Settings stay in sync)
 st.sidebar.header("Account Parameters")
@@ -200,19 +219,13 @@ st.sidebar.metric(label="Max Cash at Risk", value=f"${max_risk_cash:,.2f}")
 if "asset_data" not in st.session_state:
     st.session_state.pop("velocity_cache", None)
     with st.status("Scanning synthetic indices...", expanded=True) as status:
-        status.write("Fetching Synthetic Indices...")
-        symbols = mt5.symbols_get(group="*Volatility*,*Step*,*Jump*,*Crash*,*Boom*,*Dex*,*Range*")
-
-        if not symbols:
-            status.write("No symbols in group. Fetching all symbols...")
-            symbols = mt5.symbols_get()
-
-        symbols = [s for s in (symbols or []) if is_asset_allowed(s.name)]
+        status.write(f"Fetching symbols for {broker_type.replace('_', ' ')}...")
+        symbols = discover_symbols(universe)
 
         if symbols:
             status.write(f"Found {len(symbols)} symbols after filtering. Scanning risk metrics...")
         else:
-            status.write("No symbols found from broker.")
+            status.write("No symbols found for this broker universe.")
             symbols = []
 
         asset_data = []
@@ -269,11 +282,11 @@ if "asset_data" not in st.session_state:
 
             progress_bar.empty()
 
-            # Apply directional-bias hiding immediately when exporter JSON is available,
+            # Apply directional-bias hiding (exporter JSON and/or live MT5 EMA bias)
             # so the heavy M1 velocity step only runs on the aligned watchlist.
-            status.write("Applying directional bias filter from exporter JSON...")
-            bias_result = filter_assets_from_exports(asset_data)
-            if bias_result.get("export_folder"):
+            if features.get("bias_filter", True):
+                status.write("Applying directional bias filter...")
+                bias_result = filter_assets_from_exports(asset_data, allow_live_mt5=True)
                 next_hidden = set()
                 eligible = set(bias_result.get("eligible_assets", []))
                 for row in asset_data:
@@ -283,17 +296,20 @@ if "asset_data" not in st.session_state:
                     if name not in eligible:
                         next_hidden.add(name)
                 st.session_state.hidden_assets = next_hidden
-                save_hidden_assets(next_hidden)
+                st.session_state.hidden_assets_profile = profile_name
+                save_hidden_assets(next_hidden, profile_name)
                 st.session_state.asset_directions = {
                     asset: direction
                     for asset, direction in bias_result.get("directions", {}).items()
                     if asset in eligible
                 }
+                source = bias_result.get("bias_source", "none")
                 status.write(
-                    f"Bias filter kept {len(eligible)} asset(s), hid {len(next_hidden)}."
+                    f"Bias filter ({source}) kept {len(eligible)} asset(s), "
+                    f"hid {len(next_hidden)}."
                 )
             else:
-                status.write("No exporter JSON found — showing all Safe Size assets.")
+                status.write("Bias filter disabled for this profile.")
 
             status.update(label="Scan complete!", state="complete", expanded=False)
         else:
@@ -320,7 +336,7 @@ if not df_assets.empty:
 
     df_assets = df_assets.sort_values(by="Risk Score", ascending=True)
 
-hidden_assets = init_hidden_assets()
+hidden_assets = init_hidden_assets(profile_name)
 
 # 4. RENDER THE INTERFACE DISPLAY LAYOUT
 st.subheader("Watchlist")
@@ -362,48 +378,43 @@ with filter_col:
         if not asset_data:
             st.warning("Run the initial scan first so there is an asset list to filter.")
         else:
-            with st.spinner("Filtering assets from MOLD_EMPIRE_EXPORTER JSON files..."):
+            with st.spinner("Filtering assets by directional bias..."):
                 # Bias filter only — margin is already handled by the Safe Size scan.
-                result = filter_assets_from_exports(asset_data)
+                result = filter_assets_from_exports(asset_data, allow_live_mt5=True)
 
-            if not result.get("export_folder"):
-                st.error(
-                    "Could not find MOLD_EMPIRE_EXPORTER JSON files. "
-                    "Attach the indicator to charts so it writes asset_snapshot_*.json "
-                    "into the MT5 MQL5/Files folder, then try again."
-                )
-            else:
-                hidden_assets = init_hidden_assets()
-                next_hidden_assets = set(hidden_assets)
-                eligible = result.get("eligible_assets", [])
-                rejected = result.get("rejected_assets", [])
+            hidden_assets = init_hidden_assets(profile_name)
+            next_hidden_assets = set(hidden_assets)
+            eligible = result.get("eligible_assets", [])
+            rejected = result.get("rejected_assets", [])
 
-                for asset in eligible:
-                    next_hidden_assets.discard(asset)
+            for asset in eligible:
+                next_hidden_assets.discard(asset)
 
-                for asset in rejected:
-                    next_hidden_assets.add(asset)
+            for asset in rejected:
+                next_hidden_assets.add(asset)
 
-                st.session_state.hidden_assets = next_hidden_assets
-                save_hidden_assets(next_hidden_assets)
+            st.session_state.hidden_assets = next_hidden_assets
+            st.session_state.hidden_assets_profile = profile_name
+            save_hidden_assets(next_hidden_assets, profile_name)
 
-                directions = {
-                    asset: direction
-                    for asset, direction in result.get("directions", {}).items()
-                    if asset in eligible
-                }
-                st.session_state.asset_directions = directions
-                buy_count = sum(1 for d in directions.values() if d == "BUY")
-                sell_count = sum(1 for d in directions.values() if d == "SELL")
-                st.success(
-                    f"One-directional bias: {len(eligible)} kept "
-                    f"({buy_count} BUY · {sell_count} SELL) · "
-                    f"{len(rejected)} hidden"
-                )
-                st.rerun()
+            directions = {
+                asset: direction
+                for asset, direction in result.get("directions", {}).items()
+                if asset in eligible
+            }
+            st.session_state.asset_directions = directions
+            buy_count = sum(1 for d in directions.values() if d == "BUY")
+            sell_count = sum(1 for d in directions.values() if d == "SELL")
+            source = result.get("bias_source", "none")
+            st.success(
+                f"One-directional bias ({source}): {len(eligible)} kept "
+                f"({buy_count} BUY · {sell_count} SELL) · "
+                f"{len(rejected)} hidden"
+            )
+            st.rerun()
 
 if not df_assets.empty:
-    df_assets["Index Class"] = df_assets["Asset"].apply(get_index_class)
+    df_assets["Index Class"] = df_assets["Asset"].apply(lambda a: get_index_class(a, universe))
 
     render_sidebar_hidden_assets(hidden_assets)
 
@@ -418,7 +429,7 @@ if not df_assets.empty:
             [row for row in asset_data if row.get("Suitable") == "🟢 Safe Size"]
         )
         if not df_assets.empty:
-            df_assets["Index Class"] = df_assets["Asset"].apply(get_index_class)
+            df_assets["Index Class"] = df_assets["Asset"].apply(lambda a: get_index_class(a, universe))
             margin_rank = df_assets["Min-Margin ($)"].rank(method="min", ascending=True)
             pip_value_rank = df_assets["Pip Value ($/min)"].rank(
                 method="min", ascending=True, na_option="bottom"
@@ -428,7 +439,7 @@ if not df_assets.empty:
         df_scanner = df_assets[~df_assets["Asset"].isin(hidden_assets)].copy()
 
     # Prefer live export directions; fall back to last Filter Assets result.
-    live_directions = get_export_directions(df_scanner["Asset"].tolist())
+    live_directions = get_export_directions(df_scanner["Asset"].tolist(), allow_live_mt5=True)
     if live_directions:
         st.session_state.asset_directions = live_directions
     directions = st.session_state.get("asset_directions", {})

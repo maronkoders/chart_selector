@@ -4,7 +4,7 @@ import streamlit as st
 
 from core import mt5_client
 from core.calendar_view import build_calendar_html, build_month_grid
-from core.config import load_config, get_profile_plan, calculate_plan_progress
+from core.config import load_config, get_profile_plan, calculate_plan_progress, get_active_profile
 from core.plan_frequency import build_week_targets_for_grid
 from core.hidden_assets_store import load_hidden_assets
 
@@ -181,7 +181,8 @@ st.divider()
 
 st.subheader("Watchlist")
 asset_data = st.session_state.get("asset_data") or []
-hidden_assets = load_hidden_assets()
+active_name, _ = get_active_profile(cfg)
+hidden_assets = load_hidden_assets(active_name)
 watchlist = sorted(
     {
         row["Asset"]

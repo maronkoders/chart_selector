@@ -176,31 +176,121 @@ def _has_one_directional_bias(exported: dict) -> tuple[bool, str | None, str]:
     return False, direction, "daily price/change not confirming bias"
 
 
+def _ema_last(closes, period: int) -> float | None:
+    if closes is None or len(closes) < period:
+        return None
+    # MT5 MODE_EMA: alpha = 2/(period+1), applied oldest → newest.
+    alpha = 2.0 / (period + 1.0)
+    value = float(closes[0])
+    for price in closes[1:]:
+        value = (float(price) - value) * alpha + value
+    return value
+
+
+def _timeframe_ema_bias(symbol: str, timeframe: int, fast: int = 50, slow: int = 110) -> str | None:
+    """BUY/SELL/None from EMA fast vs slow on closed bars (same idea as MOLD_EMPIRE_EXPORTER)."""
+    if mt5 is None:
+        return None
+    need = slow + 5
+    rates = mt5.copy_rates_from_pos(symbol, timeframe, 1, need)
+    if rates is None or len(rates) < slow:
+        return None
+    closes = [float(r["close"]) for r in rates]
+    fast_ema = _ema_last(closes, fast)
+    slow_ema = _ema_last(closes, slow)
+    if fast_ema is None or slow_ema is None:
+        return None
+    delta = fast_ema - slow_ema
+    if delta > 0:
+        return "BUY"
+    if delta < 0:
+        return "SELL"
+    return None
+
+
+def compute_live_bias_snapshot(symbol: str) -> dict | None:
+    """Build an exporter-compatible snapshot from live MT5 rates (any broker)."""
+    if mt5 is None:
+        return None
+
+    if not mt5.symbol_select(symbol, True):
+        return None
+
+    tick = mt5.symbol_info_tick(symbol)
+    if tick is None:
+        return None
+
+    current_price = float(tick.bid if tick.bid > 0 else tick.ask)
+    prev_day = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_D1, 1, 1)
+    if prev_day is None or len(prev_day) < 1:
+        daily_close = None
+        daily_change = None
+    else:
+        daily_close = float(prev_day[0]["close"])
+        daily_change = (
+            ((current_price - daily_close) / daily_close) * 100.0
+            if daily_close > 0
+            else None
+        )
+
+    bias = {
+        "M1": _timeframe_ema_bias(symbol, mt5.TIMEFRAME_M1),
+        "M5": _timeframe_ema_bias(symbol, mt5.TIMEFRAME_M5),
+        "M15": _timeframe_ema_bias(symbol, mt5.TIMEFRAME_M15),
+        "M30": _timeframe_ema_bias(symbol, mt5.TIMEFRAME_M30),
+    }
+
+    return {
+        "Asset": symbol,
+        "Current Price": current_price,
+        "Daily Close": daily_close,
+        "Daily Change": daily_change,
+        "Bias": bias,
+    }
+
+
+def _load_bias_snapshot(
+    symbol: str,
+    export_folder: Path | None,
+    allow_live_mt5: bool,
+) -> tuple[dict | None, str]:
+    """Return (snapshot, source) where source is 'export', 'live', or 'none'."""
+    if export_folder is not None and export_folder.exists():
+        path = _export_path_for_symbol(symbol, export_folder)
+        if path.exists():
+            exported = _load_json_dict(path)
+            if exported:
+                return exported, "export"
+
+    if allow_live_mt5:
+        live = compute_live_bias_snapshot(symbol)
+        if live:
+            return live, "live"
+
+    return None, "none"
+
+
 def get_export_directions(
     symbols: list[str],
     export_folder: str | Path | None = None,
+    allow_live_mt5: bool = True,
 ) -> dict[str, str]:
-    """Return {symbol: "BUY"|"SELL"} from MOLD_EMPIRE_EXPORTER JSON files.
+    """Return {symbol: "BUY"|"SELL"} for assets with aligned one-directional bias.
 
-    Only includes symbols whose export has a clear aligned one-directional bias.
+    Prefers MOLD_EMPIRE_EXPORTER JSON when present; otherwise computes the same
+    EMA/daily-change rules live from MT5 (works for Weltrade and other brokers).
     """
     if export_folder is not None:
-        folder = Path(export_folder)
+        folder: Path | None = Path(export_folder)
     else:
         folder = _discover_export_folder()
 
-    if folder is None or not folder.exists():
-        return {}
-
     directions: dict[str, str] = {}
     for symbol in symbols:
-        path = _export_path_for_symbol(symbol, folder)
-        if not path.exists():
+        snapshot, _source = _load_bias_snapshot(symbol, folder, allow_live_mt5=allow_live_mt5)
+        if not snapshot:
             continue
-        exported = _load_json_dict(path)
-        if not exported:
-            continue
-        ok, direction, _reason = _has_one_directional_bias(exported)
+        ok, direction, _reason = _has_one_directional_bias(snapshot)
         if ok and direction:
             directions[symbol] = direction
     return directions
@@ -324,15 +414,17 @@ def filter_assets_from_exports(
     asset_data: list[dict],
     max_risk_cash: float | None = None,
     export_folder: str | Path | None = None,
+    allow_live_mt5: bool = True,
 ) -> dict:
-    """Filter assets using per-symbol JSON exports from MOLD_EMPIRE_EXPORTER.
+    """Filter assets by one-directional bias (exporter JSON and/or live MT5).
 
     Keeps assets with one-directional bias:
     - M1, M5, M15, M30 all BUY or all SELL
     - Daily change and price vs daily close confirm that direction
 
-    Assets without an export file, or without alignment, are rejected so the
-    UI can hide them automatically.
+    Prefers per-symbol JSON exports from MOLD_EMPIRE_EXPORTER when available.
+    When exports are missing (typical for Weltrade), computes the same rules
+    live from MT5 EMA(50)/EMA(110) + daily change.
 
     Returns:
       {
@@ -341,33 +433,19 @@ def filter_assets_from_exports(
         "reasons": {symbol: reason},
         "directions": {symbol: "BUY"|"SELL"},
         "export_folder": str | None,
+        "bias_source": "export" | "live" | "mixed" | "none",
       }
     """
     eligible: list[str] = []
     rejected: list[str] = []
     reasons: dict[str, str] = {}
     directions: dict[str, str] = {}
+    sources_used: set[str] = set()
 
-    folder: Path | None
     if export_folder is not None:
-        folder = Path(export_folder)
+        folder: Path | None = Path(export_folder)
     else:
         folder = _discover_export_folder()
-
-    if folder is None or not folder.exists():
-        for asset in asset_data:
-            symbol = asset.get("Asset")
-            if not symbol:
-                continue
-            rejected.append(symbol)
-            reasons[symbol] = "export folder not found"
-        return {
-            "eligible_assets": eligible,
-            "rejected_assets": rejected,
-            "reasons": reasons,
-            "directions": directions,
-            "export_folder": None,
-        }
 
     for asset in asset_data:
         symbol = asset.get("Asset")
@@ -385,19 +463,16 @@ def filter_assets_from_exports(
             reasons[symbol] = "min margin exceeds max risk"
             continue
 
-        path = _export_path_for_symbol(symbol, folder)
-        if not path.exists():
+        snapshot, source = _load_bias_snapshot(
+            symbol, folder, allow_live_mt5=allow_live_mt5
+        )
+        if not snapshot:
             rejected.append(symbol)
-            reasons[symbol] = "no export file"
+            reasons[symbol] = "no bias data"
             continue
 
-        exported = _load_json_dict(path)
-        if not exported:
-            rejected.append(symbol)
-            reasons[symbol] = "export parse error"
-            continue
-
-        ok, direction, reason = _has_one_directional_bias(exported)
+        sources_used.add(source)
+        ok, direction, reason = _has_one_directional_bias(snapshot)
         if direction:
             directions[symbol] = direction
 
@@ -407,12 +482,22 @@ def filter_assets_from_exports(
             rejected.append(symbol)
             reasons[symbol] = reason
 
+    if not sources_used:
+        bias_source = "none"
+    elif sources_used == {"export"}:
+        bias_source = "export"
+    elif sources_used == {"live"}:
+        bias_source = "live"
+    else:
+        bias_source = "mixed"
+
     return {
         "eligible_assets": eligible,
         "rejected_assets": rejected,
         "reasons": reasons,
         "directions": directions,
-        "export_folder": str(folder),
+        "export_folder": str(folder) if folder is not None else None,
+        "bias_source": bias_source,
     }
 
 
