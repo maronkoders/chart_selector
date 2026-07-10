@@ -102,11 +102,16 @@ def get_profile_broker_type(profile_name: str | None, profile: dict | None) -> s
 
 
 def get_profile_universe(profile_name: str | None, profile: dict | None) -> dict[str, Any]:
+    broker_type = get_profile_broker_type(profile_name, profile)
+    base = dict(UNIVERSES[broker_type])
     if profile and isinstance(profile.get("universe"), dict) and profile["universe"]:
-        base = dict(UNIVERSES[get_profile_broker_type(profile_name, profile)])
-        base.update(profile["universe"])
-        return base
-    return dict(UNIVERSES[get_profile_broker_type(profile_name, profile)])
+        override = dict(profile["universe"])
+        base.update(override)
+
+    # Profile-level class selection drives scanning + Market Watch sync.
+    if profile and "enabled_index_classes" in profile:
+        base["enabled_index_classes"] = list(profile.get("enabled_index_classes") or [])
+    return base
 
 
 def get_profile_features(profile: dict | None) -> dict[str, Any]:
@@ -114,6 +119,31 @@ def get_profile_features(profile: dict | None) -> dict[str, Any]:
     if profile and isinstance(profile.get("features"), dict):
         features.update(profile["features"])
     return features
+
+
+def available_index_classes(universe: dict[str, Any]) -> list[str]:
+    labels = []
+    for pair in universe.get("index_class_keywords") or []:
+        if pair and pair[0] not in labels:
+            labels.append(pair[0])
+    return labels
+
+
+def get_enabled_index_classes(profile_name: str | None, profile: dict | None) -> list[str]:
+    """Return enabled class labels for a profile (all available if unset)."""
+    broker_type = get_profile_broker_type(profile_name, profile)
+    catalog = dict(UNIVERSES[broker_type])
+    if profile and isinstance(profile.get("universe"), dict):
+        catalog.update(
+            {k: v for k, v in profile["universe"].items() if k != "enabled_index_classes"}
+        )
+    available = available_index_classes(catalog)
+
+    if not profile or "enabled_index_classes" not in profile:
+        return list(available)
+
+    raw = profile.get("enabled_index_classes") or []
+    return [c for c in raw if c in available]
 
 
 def is_symbol_allowed(symbol_name: str, symbol_path: str, universe: dict[str, Any]) -> bool:
@@ -136,14 +166,25 @@ def is_symbol_allowed(symbol_name: str, symbol_path: str, universe: dict[str, An
         if not numbers or numbers[0] not in allowed_numbers:
             return False
 
+    if "enabled_index_classes" in universe:
+        enabled = universe.get("enabled_index_classes") or []
+        if not enabled:
+            return False
+        symbol_class = get_index_class(symbol_name, universe)
+        if symbol_class not in set(enabled):
+            return False
+
     return True
 
 
 def get_index_class(asset_name: str, universe: dict[str, Any]) -> str:
     name_lower = asset_name.lower()
-    for pair in universe.get("index_class_keywords") or []:
-        if len(pair) >= 2 and pair[1].lower() in name_lower:
-            return pair[0]
+    # Longest keyword first so "sfx vol" wins over "fx vol".
+    pairs = [p for p in (universe.get("index_class_keywords") or []) if len(p) >= 2]
+    pairs.sort(key=lambda p: len(str(p[1])), reverse=True)
+    for label, keyword in pairs:
+        if str(keyword).lower() in name_lower:
+            return label
     return "Other"
 
 

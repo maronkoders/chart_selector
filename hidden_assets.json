@@ -33,30 +33,6 @@
     "Volatility 90 Index"
   ],
   "Weltrade": [
-    "BreakX 1200",
-    "BreakX 1800",
-    "BreakX 600",
-    "FX Vol 40",
-    "FiboX",
-    "FlipX 2",
-    "FlipX 3",
-    "FlipX 4",
-    "FlipX 5",
-    "GainX 1200",
-    "GainX 400",
-    "GainX 800",
-    "GainX 999",
-    "PainX 400",
-    "PainX 800",
-    "PainX 999",
-    "QuadX",
-    "SFX Vol 20",
-    "SFX Vol 40",
-    "SFX Vol 60",
-    "SFX Vol 80",
-    "SwitchX 1200",
-    "SwitchX 600",
-    "TrendX 1200",
-    "TrendX 600"
+    "FX Vol 40"
   ]
 }

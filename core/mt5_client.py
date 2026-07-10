@@ -76,6 +76,62 @@ def disconnect() -> None:
     st.session_state.mt5_status_message = "Disconnected."
 
 
+def sync_universe_to_market_watch(universe: dict) -> dict:
+    """Add enabled-class symbols to Market Watch; remove disabled-class ones.
+
+    Only touches symbols that belong to this broker universe. Unrelated Market
+    Watch symbols are left alone.
+    """
+    from core.broker_universe import available_index_classes, get_index_class, is_symbol_allowed
+
+    catalog = dict(universe)
+    catalog.pop("enabled_index_classes", None)
+    known_classes = set(available_index_classes(catalog))
+
+    if "enabled_index_classes" in universe:
+        enabled = set(universe.get("enabled_index_classes") or [])
+    else:
+        enabled = set(known_classes)
+
+    groups = catalog.get("mt5_groups") or ["*"]
+    seen = set()
+    candidates = []
+    for group in groups:
+        for sym in mt5.symbols_get(group=group) or []:
+            if sym.name in seen:
+                continue
+            seen.add(sym.name)
+            path = getattr(sym, "path", "") or ""
+            if is_symbol_allowed(sym.name, path, catalog):
+                candidates.append(sym)
+
+    added: list[str] = []
+    removed: list[str] = []
+    skipped: list[str] = []
+
+    for sym in candidates:
+        cls = get_index_class(sym.name, catalog)
+        if cls not in known_classes:
+            continue
+        if cls in enabled:
+            if mt5.symbol_select(sym.name, True):
+                added.append(sym.name)
+            else:
+                skipped.append(sym.name)
+        else:
+            info = mt5.symbol_info(sym.name)
+            if info is not None and info.visible:
+                if mt5.symbol_select(sym.name, False):
+                    removed.append(sym.name)
+
+    return {
+        "added": added,
+        "removed": removed,
+        "skipped": skipped,
+        "enabled_classes": sorted(enabled),
+    }
+
+
 def get_account_info() -> dict | None:
     info = mt5.account_info()
     return info._asdict() if info else None

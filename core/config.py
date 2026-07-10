@@ -57,12 +57,22 @@ def get_active_profile(cfg: dict):
 
 def upsert_profile(cfg: dict, name: str, terminal_path: str, login: str, password: str, server: str) -> None:
     cfg.setdefault("profiles", {})
-    cfg["profiles"][name] = {
+    existing = dict(cfg["profiles"].get(name) or {})
+    existing.update({
         "terminal_path": terminal_path.strip(),
         "login": login.strip(),
         "password": password,
         "server": server.strip(),
-    }
+    })
+    cfg["profiles"][name] = existing
+    save_config(cfg)
+
+
+def set_enabled_index_classes(cfg: dict, profile_name: str, classes: list[str]) -> None:
+    profiles = cfg.setdefault("profiles", {})
+    if profile_name not in profiles:
+        return
+    profiles[profile_name]["enabled_index_classes"] = list(classes)
     save_config(cfg)
 
 

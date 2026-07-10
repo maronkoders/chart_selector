@@ -13,6 +13,15 @@ from core.config import (
     link_plan_to_profile,
     unlink_plan_from_profile,
     set_screenshot_folder,
+    set_enabled_index_classes,
+    get_active_profile,
+)
+from core.broker_universe import (
+    get_profile_broker_type,
+    get_profile_universe,
+    available_index_classes,
+    get_enabled_index_classes,
+    advisor_title,
 )
 
 st.title("⚙️ Settings")
@@ -83,7 +92,9 @@ if "screenshot_folder_selected" not in st.session_state:
     st.session_state.screenshot_folder_selected = None
 
 # Secondary navigation tabs
-tab1, tab2, tab3 = st.tabs(["Broker Profiles", "Risk Parameters", "Screenshot Folder"])
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["Broker Profiles", "Index Classes", "Risk Parameters", "Screenshot Folder"]
+)
 
 # Tab 1: Broker Profiles
 with tab1:
@@ -241,8 +252,100 @@ with tab1:
         else:
             st.error(msg)
 
-# Tab 2: Risk Parameters
+# Tab 2: Index Classes (per active profile / broker)
 with tab2:
+    st.subheader("Index Classes")
+    st.caption(
+        "Choose which index classes belong to this login profile. "
+        "Selected classes are scanned in Indices Advisor and can be synced into MT5 Market Watch."
+    )
+
+    profile_name, profile = get_active_profile(cfg)
+    if not profile_name or not profile:
+        st.warning("Select an active broker profile first (Broker Profiles tab).")
+    else:
+        broker_type = get_profile_broker_type(profile_name, profile)
+        universe = get_profile_universe(profile_name, profile)
+        catalog = available_index_classes(universe)
+        enabled = get_enabled_index_classes(profile_name, profile)
+
+        st.markdown(f"**Profile:** `{profile_name}`")
+        st.caption(f"{advisor_title(broker_type)} · `{broker_type}`")
+
+        if not catalog:
+            st.info("This broker type has no predefined index classes.")
+        else:
+            widget_key = f"index_classes_{profile_name}"
+            selected = st.multiselect(
+                "Enabled index classes",
+                options=catalog,
+                default=enabled,
+                help="Remove a class here to exclude it from scanning and Market Watch sync.",
+                key=widget_key,
+            )
+
+            c_save, c_all, c_none = st.columns(3)
+            with c_save:
+                save_clicked = st.button("💾 Save classes", width="stretch")
+            with c_all:
+                if st.button("Select all", width="stretch"):
+                    set_enabled_index_classes(cfg, profile_name, catalog)
+                    st.session_state.pop(widget_key, None)
+                    st.session_state.pop("asset_data", None)
+                    st.session_state.pop("velocity_cache", None)
+                    st.success("All classes enabled.")
+                    st.rerun()
+            with c_none:
+                if st.button("Clear all", width="stretch"):
+                    set_enabled_index_classes(cfg, profile_name, [])
+                    st.session_state.pop(widget_key, None)
+                    st.session_state.pop("asset_data", None)
+                    st.session_state.pop("velocity_cache", None)
+                    st.success("All classes disabled.")
+                    st.rerun()
+
+            if save_clicked:
+                set_enabled_index_classes(cfg, profile_name, selected)
+                st.session_state.pop(widget_key, None)
+                st.session_state.pop("asset_data", None)
+                st.session_state.pop("velocity_cache", None)
+                st.success(
+                    f"Saved {len(selected)} class(es) for `{profile_name}`."
+                )
+                st.rerun()
+
+            st.divider()
+            st.markdown("**MT5 Market Watch**")
+            st.caption(
+                "Adds symbols for enabled classes to Market Watch, and removes "
+                "symbols for disabled classes that belong to this broker universe."
+            )
+            if st.button("📡 Sync selected classes to Market Watch", width="stretch"):
+                ok, msg = mt5_client.ensure_connection(cfg, force=True)
+                if not ok:
+                    st.error(msg)
+                else:
+                    # Reload profile after possible saves in this session.
+                    cfg = load_config()
+                    st.session_state.app_config = cfg
+                    _, profile = get_active_profile(cfg)
+                    universe = get_profile_universe(profile_name, profile)
+                    with st.spinner("Updating MT5 Market Watch..."):
+                        result = mt5_client.sync_universe_to_market_watch(universe)
+                    st.success(
+                        f"Market Watch updated · added {len(result['added'])} · "
+                        f"removed {len(result['removed'])} · "
+                        f"classes: {', '.join(result['enabled_classes']) or 'none'}"
+                    )
+                    if result["skipped"]:
+                        st.warning(
+                            f"Could not select {len(result['skipped'])} symbol(s): "
+                            + ", ".join(result["skipped"][:8])
+                            + ("…" if len(result["skipped"]) > 8 else "")
+                        )
+
+# Tab 3: Risk Parameters
+with tab3:
     st.subheader("Default Risk Parameters")
     st.caption(
         "Account Balance is now pulled automatically from your connected MT5 account on the "
@@ -263,8 +366,8 @@ with tab2:
         set_risk_params(cfg, account_size, risk_percentage)
         st.success("Risk defaults saved.")
 
-# Tab 3: Screenshot Folder ─────────────────────────────────────────────────────
-with tab3:
+# Tab 4: Screenshot Folder ─────────────────────────────────────────────────────
+with tab4:
     st.subheader("📁 Screenshot Folder")
     st.caption(
         "Set the folder where all uploaded screenshots and images will be saved. "

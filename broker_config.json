@@ -96,13 +96,16 @@
         "bias_filter": true,
         "bias_source": "auto"
       },
-      "trading_plan": "40%"
+      "trading_plan": "40%",
+      "enabled_index_classes": [
+        "FX Vol"
+      ]
     }
   },
   "active_profile": "Weltrade",
   "risk": {
     "account_size": 6.89,
-    "risk_percentage": 50.0
+    "risk_percentage": 20.45
   },
   "trading_plans": {
     "$1 challenge": {
