@@ -6,7 +6,7 @@ from core import mt5_client
 from core.calendar_view import build_calendar_html, build_month_grid
 from core.config import load_config, get_profile_plan, calculate_plan_progress
 from core.plan_frequency import build_week_targets_for_grid
-from core.watchlist_store import load_watchlist
+from core.hidden_assets_store import load_hidden_assets
 
 st.title("📊 Dashboard")
 
@@ -180,9 +180,17 @@ else:
 st.divider()
 
 st.subheader("Watchlist")
-watchlist = load_watchlist()
+asset_data = st.session_state.get("asset_data") or []
+hidden_assets = load_hidden_assets()
+watchlist = sorted(
+    {
+        row["Asset"]
+        for row in asset_data
+        if row.get("Suitable") == "🟢 Safe Size" and row.get("Asset") not in hidden_assets
+    }
+)
 if not watchlist:
-    st.info("No assets in your watchlist yet. Add some from the Indices Advisor page.")
+    st.info("No watchlist assets yet. Run Filter Assets on the Indices Advisor page.")
 else:
-    st.write(", ".join(sorted(watchlist)))
+    st.write(", ".join(watchlist))
     st.page_link("app_pages/indices_advisor.py", label="Manage watchlist in Indices Advisor →", icon="🎯")
