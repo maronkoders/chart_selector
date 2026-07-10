@@ -176,6 +176,36 @@ def _has_one_directional_bias(exported: dict) -> tuple[bool, str | None, str]:
     return False, direction, "daily price/change not confirming bias"
 
 
+def get_export_directions(
+    symbols: list[str],
+    export_folder: str | Path | None = None,
+) -> dict[str, str]:
+    """Return {symbol: "BUY"|"SELL"} from MOLD_EMPIRE_EXPORTER JSON files.
+
+    Only includes symbols whose export has a clear aligned one-directional bias.
+    """
+    if export_folder is not None:
+        folder = Path(export_folder)
+    else:
+        folder = _discover_export_folder()
+
+    if folder is None or not folder.exists():
+        return {}
+
+    directions: dict[str, str] = {}
+    for symbol in symbols:
+        path = _export_path_for_symbol(symbol, folder)
+        if not path.exists():
+            continue
+        exported = _load_json_dict(path)
+        if not exported:
+            continue
+        ok, direction, _reason = _has_one_directional_bias(exported)
+        if ok and direction:
+            directions[symbol] = direction
+    return directions
+
+
 def get_indicator_snapshot(symbol: str) -> dict:
     """Read indicator data exported by the MT5 indicator from the terminal Files folder."""
     exported = _load_exported_indicator_snapshot(symbol)

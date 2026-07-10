@@ -135,6 +135,34 @@ def test_filter_assets_from_exports_keeps_one_directional_bias(tmp_path):
     assert result["reasons"]["Volatility 15 (1s) Index"] == "no export file"
 
 
+def test_get_export_directions_returns_aligned_only(tmp_path):
+    export_folder = tmp_path / "Files"
+    export_folder.mkdir()
+    _write_export(
+        export_folder,
+        "Jump 10 Index",
+        price=90.0,
+        daily_close=100.0,
+        daily_change=-2.0,
+        bias={"M1": "SELL", "M5": "SELL", "M15": "SELL", "M30": "SELL"},
+    )
+    _write_export(
+        export_folder,
+        "Jump 75 Index",
+        price=110.0,
+        daily_close=100.0,
+        daily_change=1.0,
+        bias={"M1": "BUY", "M5": "SELL", "M15": "BUY", "M30": "BUY"},
+    )
+
+    result = mt5_sync.get_export_directions(
+        ["Jump 10 Index", "Jump 75 Index", "Missing Index"],
+        export_folder=export_folder,
+    )
+
+    assert result == {"Jump 10 Index": "SELL"}
+
+
 def test_filter_assets_from_exports_discovers_folder(tmp_path, monkeypatch):
     export_folder = tmp_path / "Files"
     export_folder.mkdir()

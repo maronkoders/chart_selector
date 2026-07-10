@@ -5,7 +5,7 @@ import streamlit as st
 import MetaTrader5 as mt5
 import pandas as pd
 
-from core.mt5_sync import sync_assets, filter_assets_from_exports
+from core.mt5_sync import sync_assets, filter_assets_from_exports, get_export_directions
 from core import mt5_client
 from core.config import load_config, set_risk_params
 from core.hidden_assets_store import (
@@ -16,6 +16,84 @@ from core.hidden_assets_store import (
     save_hidden_assets,
 )
 from core.velocity import compute_price_velocity
+
+BIAS_ARROW = {
+    "BUY": "↑",
+    "SELL": "↓",
+}
+
+
+def format_bias_arrow(direction: str | None) -> str:
+    if not direction:
+        return "—"
+    return BIAS_ARROW.get(direction, "—")
+
+
+def style_bias_column(df: pd.DataFrame) -> "pd.io.formats.style.Styler":
+    def _color_bias(value: str) -> str:
+        if value == "↑":
+            return "color: #3b82f6; font-weight: 700; font-size: 1.15rem;"
+        if value == "↓":
+            return "color: #ef4444; font-weight: 700; font-size: 1.15rem;"
+        return "color: #94a3b8;"
+
+    styler = df.style.map(_color_bias, subset=["Bias"])
+    styler = styler.set_properties(subset=["Bias"], **{"text-align": "center"})
+    return styler
+
+
+def _ensure_symbol_selected(name: str):
+    """Select a symbol only when it is missing or not visible in Market Watch."""
+    info = mt5.symbol_info(name)
+    if info is None or not info.visible:
+        mt5.symbol_select(name, True)
+        info = mt5.symbol_info(name)
+    return info
+
+
+def _fill_velocity_for_assets(asset_names: list[str]) -> dict[str, dict]:
+    """Compute M1 velocity only for the given assets, reusing session cache."""
+    cache: dict = st.session_state.setdefault("velocity_cache", {})
+    results: dict[str, dict] = {}
+
+    missing = [name for name in asset_names if name not in cache]
+    if missing:
+        progress = st.progress(0, text="Computing velocity...")
+        for i, name in enumerate(missing):
+            progress.progress(
+                (i + 1) / len(missing),
+                text=f"Velocity {i + 1}/{len(missing)}: {name}",
+            )
+            _ensure_symbol_selected(name)
+            velocity_result = compute_price_velocity(name, "M1")
+            velocity_m1 = (
+                round(velocity_result["velocity"], 4)
+                if velocity_result and velocity_result["velocity"] is not None
+                else None
+            )
+            cache[name] = {"velocity": velocity_m1}
+        progress.empty()
+
+    for name in asset_names:
+        results[name] = cache.get(name, {"velocity": None})
+    return results
+
+
+def _apply_velocity_to_asset_data(asset_data: list[dict], velocity_by_asset: dict[str, dict]) -> None:
+    """Update in-place asset rows and session state with cached velocity values."""
+    for row in asset_data:
+        name = row.get("Asset")
+        if name not in velocity_by_asset:
+            continue
+        velocity_m1 = velocity_by_asset[name].get("velocity")
+        min_lot = row.get("Min Lot")
+        row["Velocity (pips/min)"] = velocity_m1
+        row["Pip Value ($/min)"] = (
+            round(velocity_m1 * min_lot, 4)
+            if velocity_m1 is not None and min_lot is not None
+            else None
+        )
+    st.session_state.asset_data = asset_data
 
 INDEX_CLASS_KEYWORDS = [
     ("Volatility", "volatility"),
@@ -120,6 +198,7 @@ st.sidebar.metric(label="Max Cash at Risk", value=f"${max_risk_cash:,.2f}")
 
 # 3. FETCH SYNTHETIC INDICES SPEC SHEETS
 if "asset_data" not in st.session_state:
+    st.session_state.pop("velocity_cache", None)
     with st.status("Scanning synthetic indices...", expanded=True) as status:
         status.write("Fetching Synthetic Indices...")
         symbols = mt5.symbols_get(group="*Volatility*,*Step*,*Jump*,*Crash*,*Boom*,*Dex*,*Range*")
@@ -142,11 +221,9 @@ if "asset_data" not in st.session_state:
             progress_bar = st.progress(0, text="Starting scan...")
             for i, sym in enumerate(symbols):
                 name = sym.name
-                progress_bar.progress((i + 1) / len(symbols), text=f"Syncing history for {name}...")
+                progress_bar.progress((i + 1) / len(symbols), text=f"Scanning {name}...")
 
-                mt5.symbol_select(name, True)  # Make sure it's active in Market Watch
-
-                info = mt5.symbol_info(name)
+                info = _ensure_symbol_selected(name)
                 tick = mt5.symbol_info_tick(name)
 
                 if info is None or tick is None:
@@ -157,16 +234,6 @@ if "asset_data" not in st.session_state:
                 min_lot = info.volume_min
                 point_value = info.trade_tick_value / info.trade_tick_size if info.trade_tick_size > 0 else 1.0
 
-                rates = mt5.copy_rates_from_pos(name, mt5.TIMEFRAME_H1, 0, 24)
-
-                if rates is not None and len(rates) > 0:
-                    df_rates = pd.DataFrame(rates)
-                    avg_swing = (df_rates['high'] - df_rates['low']).mean()
-                else:
-                    avg_swing = current_price * 0.01
-
-                min_trade_risk_cost = avg_swing * min_lot * point_value
-
                 vol_limit = info.volume_limit
                 min_margin = mt5.order_calc_margin(mt5.ORDER_TYPE_BUY, name, min_lot, current_price)
                 if min_margin is None:
@@ -174,14 +241,21 @@ if "asset_data" not in st.session_state:
 
                 is_suitable = min_margin <= max_risk_cash and min_margin > 0
 
-                velocity_result = compute_price_velocity(name, "M1")
-                velocity_m1 = (
-                    round(velocity_result["velocity"], 4)
-                    if velocity_result and velocity_result["velocity"] is not None
-                    else None
-                )
-                pip_value = round(velocity_m1 * min_lot, 4) if velocity_m1 is not None else None
+                # H1 swing is only needed for Safe Size rows; skip history sync
+                # for assets that will be filtered out by margin anyway.
+                if is_suitable:
+                    rates = mt5.copy_rates_from_pos(name, mt5.TIMEFRAME_H1, 0, 24)
+                    if rates is not None and len(rates) > 0:
+                        df_rates = pd.DataFrame(rates)
+                        avg_swing = (df_rates["high"] - df_rates["low"]).mean()
+                    else:
+                        avg_swing = current_price * 0.01
+                    min_trade_risk_cost = avg_swing * min_lot * point_value
+                else:
+                    min_trade_risk_cost = 0.0
 
+                # M1 velocity is deferred until after Safe Size + bias hiding so
+                # we only pull heavy history for assets that remain visible.
                 asset_data.append({
                     "Asset": name,
                     "Min Lot": min_lot,
@@ -189,12 +263,39 @@ if "asset_data" not in st.session_state:
                     "Volume Limit": vol_limit,
                     "Min Risk Exposure ($)": round(min_trade_risk_cost, 2),
                     "Suitable": "🟢 Safe Size" if is_suitable else "🔴 Volatility Too High",
-                    "Velocity (pips/min)": velocity_m1,
-                    "Pip Value ($/min)": pip_value,
+                    "Velocity (pips/min)": None,
+                    "Pip Value ($/min)": None,
                 })
 
             progress_bar.empty()
-            status.update(label="MT5 Data Synchronization Complete!", state="complete", expanded=False)
+
+            # Apply directional-bias hiding immediately when exporter JSON is available,
+            # so the heavy M1 velocity step only runs on the aligned watchlist.
+            status.write("Applying directional bias filter from exporter JSON...")
+            bias_result = filter_assets_from_exports(asset_data)
+            if bias_result.get("export_folder"):
+                next_hidden = set()
+                eligible = set(bias_result.get("eligible_assets", []))
+                for row in asset_data:
+                    name = row.get("Asset")
+                    if not name:
+                        continue
+                    if name not in eligible:
+                        next_hidden.add(name)
+                st.session_state.hidden_assets = next_hidden
+                save_hidden_assets(next_hidden)
+                st.session_state.asset_directions = {
+                    asset: direction
+                    for asset, direction in bias_result.get("directions", {}).items()
+                    if asset in eligible
+                }
+                status.write(
+                    f"Bias filter kept {len(eligible)} asset(s), hid {len(next_hidden)}."
+                )
+            else:
+                status.write("No exporter JSON found — showing all Safe Size assets.")
+
+            status.update(label="Scan complete!", state="complete", expanded=False)
         else:
             status.update(label="MT5 Initialization Complete, but no symbols found.", state="error", expanded=True)
 
@@ -286,9 +387,14 @@ with filter_col:
                 st.session_state.hidden_assets = next_hidden_assets
                 save_hidden_assets(next_hidden_assets)
 
-                directions = result.get("directions", {})
-                buy_count = sum(1 for a in eligible if directions.get(a) == "BUY")
-                sell_count = sum(1 for a in eligible if directions.get(a) == "SELL")
+                directions = {
+                    asset: direction
+                    for asset, direction in result.get("directions", {}).items()
+                    if asset in eligible
+                }
+                st.session_state.asset_directions = directions
+                buy_count = sum(1 for d in directions.values() if d == "BUY")
+                sell_count = sum(1 for d in directions.values() if d == "SELL")
                 st.success(
                     f"One-directional bias: {len(eligible)} kept "
                     f"({buy_count} BUY · {sell_count} SELL) · "
@@ -303,8 +409,36 @@ if not df_assets.empty:
 
     df_scanner = df_assets[~df_assets["Asset"].isin(hidden_assets)].copy()
 
+    # Heavy M1 velocity only for assets still visible after Safe Size + bias hide.
+    visible_names = df_scanner["Asset"].tolist()
+    if visible_names:
+        velocity_by_asset = _fill_velocity_for_assets(visible_names)
+        _apply_velocity_to_asset_data(asset_data, velocity_by_asset)
+        df_assets = pd.DataFrame(
+            [row for row in asset_data if row.get("Suitable") == "🟢 Safe Size"]
+        )
+        if not df_assets.empty:
+            df_assets["Index Class"] = df_assets["Asset"].apply(get_index_class)
+            margin_rank = df_assets["Min-Margin ($)"].rank(method="min", ascending=True)
+            pip_value_rank = df_assets["Pip Value ($/min)"].rank(
+                method="min", ascending=True, na_option="bottom"
+            )
+            df_assets["Risk Score"] = margin_rank + pip_value_rank
+            df_assets = df_assets.sort_values(by="Risk Score", ascending=True)
+        df_scanner = df_assets[~df_assets["Asset"].isin(hidden_assets)].copy()
+
+    # Prefer live export directions; fall back to last Filter Assets result.
+    live_directions = get_export_directions(df_scanner["Asset"].tolist())
+    if live_directions:
+        st.session_state.asset_directions = live_directions
+    directions = st.session_state.get("asset_directions", {})
+    df_scanner["Bias"] = df_scanner["Asset"].map(
+        lambda asset: format_bias_arrow(directions.get(asset))
+    )
+
     display_columns = [
         "Asset",
+        "Bias",
         "Min Lot",
         "Min-Margin ($)",
         "Pip Value ($/min)",
@@ -385,7 +519,7 @@ if not df_assets.empty:
         table_key = f"asset_scanner_table_{current_page}_{filtered_count}_{page_size}"
 
         table_selection = st.dataframe(
-            df_page[display_columns],
+            style_bias_column(df_page[display_columns]),
             hide_index=True,
             width="stretch",
             height=table_height,
@@ -393,6 +527,11 @@ if not df_assets.empty:
             selection_mode="multi-row",
             key=table_key,
             column_config={
+                "Bias": st.column_config.TextColumn(
+                    "Bias",
+                    help="↑ blue = bullish (BUY) · ↓ red = bearish (SELL)",
+                    width="small",
+                ),
                 "Pip Value ($/min)": st.column_config.NumberColumn(
                     "Pip Value ($/min)", format="$%.4f"
                 ),
