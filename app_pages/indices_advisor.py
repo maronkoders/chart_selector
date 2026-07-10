@@ -215,10 +215,23 @@ if account_size != cfg["risk"]["account_size"] or risk_percentage != cfg["risk"]
 max_risk_cash = account_size * (risk_percentage / 100.0)
 st.sidebar.metric(label="Max Cash at Risk", value=f"${max_risk_cash:,.2f}")
 
+# Keep Market Watch = exactly the allowed synthetics (strips forex/stocks/banned).
+mw_result = mt5_client.sync_universe_to_market_watch(universe)
+if mw_result.get("removed"):
+    st.toast(
+        f"Market Watch cleaned: removed {len(mw_result['removed'])}, "
+        f"keeping {len(mw_result.get('desired') or [])} symbols."
+    )
+
 # 3. FETCH SYNTHETIC INDICES SPEC SHEETS
 if "asset_data" not in st.session_state:
     st.session_state.pop("velocity_cache", None)
     with st.status("Scanning synthetic indices...", expanded=True) as status:
+        status.write(
+            f"Market Watch set to {len(mw_result.get('desired') or [])} allowed "
+            f"symbol(s); removed {len(mw_result.get('removed') or [])} other(s)."
+        )
+
         status.write(f"Fetching symbols for {broker_type.replace('_', ' ')}...")
         symbols = discover_symbols(universe)
 

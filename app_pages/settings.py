@@ -333,8 +333,8 @@ with tab2:
                     with st.spinner("Updating MT5 Market Watch..."):
                         result = mt5_client.sync_universe_to_market_watch(universe)
                     st.success(
-                        f"Market Watch updated · added {len(result['added'])} · "
-                        f"removed {len(result['removed'])} · "
+                        f"Market Watch reset to {len(result.get('desired') or [])} symbol(s) · "
+                        f"added {len(result['added'])} · removed {len(result['removed'])} · "
                         f"classes: {', '.join(result['enabled_classes']) or 'none'}"
                     )
                     if result["skipped"]:
@@ -355,7 +355,10 @@ with tab3:
     r1, r2 = st.columns(2)
     with r1:
         account_size = st.number_input(
-            "Account Balance ($) — offline fallback", min_value=1.0, value=float(cfg["risk"]["account_size"]), step=1.0
+            "Account Balance ($) — offline fallback",
+            min_value=0.0,
+            value=float(cfg["risk"]["account_size"]),
+            step=0.01,
         )
     with r2:
         risk_percentage = st.slider(

@@ -76,58 +76,101 @@ def disconnect() -> None:
     st.session_state.mt5_status_message = "Disconnected."
 
 
-def sync_universe_to_market_watch(universe: dict) -> dict:
-    """Add enabled-class symbols to Market Watch; remove disabled-class ones.
+def purge_excluded_from_market_watch(universe: dict) -> list[str]:
+    """Fast pass: deselect any currently-visible symbols matching exclude keywords.
 
-    Only touches symbols that belong to this broker universe. Unrelated Market
-    Watch symbols are left alone.
+    Wildcards like *Step* / *Boom* can leave Multi Step, Vol over Boom, etc. in
+    Market Watch even when the advisor never scans them. Call this on page load.
+    """
+    exclude_keywords = [str(k).lower() for k in (universe.get("exclude_keywords") or [])]
+    if not exclude_keywords:
+        return []
+
+    removed: list[str] = []
+    for sym in mt5.symbols_get() or []:
+        if not getattr(sym, "visible", False):
+            continue
+        name_lower = sym.name.lower()
+        if not any(k in name_lower for k in exclude_keywords):
+            continue
+        if mt5.symbol_select(sym.name, False):
+            removed.append(sym.name)
+    return removed
+
+
+def sync_universe_to_market_watch(universe: dict) -> dict:
+    """Replace Market Watch with exactly the enabled universe symbols.
+
+    Desired synthetics are selected; every other currently-visible symbol is
+    deselected (forex/stocks/banned families included). That keeps MW aligned
+    with the advisor instead of accumulating hundreds of unrelated instruments.
     """
     from core.broker_universe import available_index_classes, get_index_class, is_symbol_allowed
 
     catalog = dict(universe)
     catalog.pop("enabled_index_classes", None)
     known_classes = set(available_index_classes(catalog))
+    exclude_keywords = [str(k).lower() for k in (catalog.get("exclude_keywords") or [])]
 
     if "enabled_index_classes" in universe:
         enabled = set(universe.get("enabled_index_classes") or [])
     else:
         enabled = set(known_classes)
 
-    groups = catalog.get("mt5_groups") or ["*"]
-    seen = set()
-    candidates = []
+    # Only the configured universe groups — do NOT add masks like *Dex* / *Spot*
+    # (*Dex* matches the substring inside "Index" and pulls in huge junk sets).
+    groups = list(catalog.get("mt5_groups") or ["*"])
+
+    seen: set[str] = set()
+    relevant = []
     for group in groups:
         for sym in mt5.symbols_get(group=group) or []:
             if sym.name in seen:
                 continue
             seen.add(sym.name)
-            path = getattr(sym, "path", "") or ""
-            if is_symbol_allowed(sym.name, path, catalog):
-                candidates.append(sym)
+            relevant.append(sym)
 
-    added: list[str] = []
-    removed: list[str] = []
+    desired: list[str] = []
     skipped: list[str] = []
-
-    for sym in candidates:
+    for sym in relevant:
+        path = getattr(sym, "path", "") or ""
+        name_lower = sym.name.lower()
         cls = get_index_class(sym.name, catalog)
-        if cls not in known_classes:
-            continue
-        if cls in enabled:
-            if mt5.symbol_select(sym.name, True):
-                added.append(sym.name)
-            else:
-                skipped.append(sym.name)
+        is_excluded = any(k in name_lower for k in exclude_keywords)
+        if (
+            not is_excluded
+            and is_symbol_allowed(sym.name, path, universe)
+            and cls in known_classes
+            and cls in enabled
+        ):
+            desired.append(sym.name)
+
+    desired_set = set(desired)
+    added: list[str] = []
+    for name in desired:
+        info = mt5.symbol_info(name)
+        already = bool(info and info.visible)
+        if mt5.symbol_select(name, True):
+            if not already:
+                added.append(name)
         else:
-            info = mt5.symbol_info(sym.name)
-            if info is not None and info.visible:
-                if mt5.symbol_select(sym.name, False):
-                    removed.append(sym.name)
+            skipped.append(name)
+
+    # Exact set: strip everything else currently showing in Market Watch.
+    removed: list[str] = []
+    for sym in mt5.symbols_get() or []:
+        if not getattr(sym, "visible", False):
+            continue
+        if sym.name in desired_set:
+            continue
+        if mt5.symbol_select(sym.name, False):
+            removed.append(sym.name)
 
     return {
         "added": added,
         "removed": removed,
         "skipped": skipped,
+        "desired": desired,
         "enabled_classes": sorted(enabled),
     }
 

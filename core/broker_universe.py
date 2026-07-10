@@ -20,11 +20,24 @@ UNIVERSES: dict[str, dict[str, Any]] = {
             "*Jump*",
             "*Crash*",
             "*Boom*",
-            # "*Dex*",
-            # "*Range*",
         ],
         "path_contains": [],
-        "exclude_keywords": ["vol over", "spot up", "spot down", "skew"],
+        # Substrings that must never enter Market Watch / advisor scans.
+        # Needed because mt5_groups wildcards (*Step*, *Boom*, *Volatility*)
+        # also match these unwanted families.
+        "exclude_keywords": [
+            "vol over",
+            "vol-over",
+            "spot up",
+            "spot-up",
+            "spot down",
+            "spot-down",
+            "skew",
+            "multi step",
+            "multi-step",
+            "range break",
+            "range-break",
+        ],
         "crash_boom_numbers": ["300", "500", "600", "900", "1000"],
         "index_class_keywords": [
             ["Volatility", "volatility"],
@@ -179,6 +192,11 @@ def is_symbol_allowed(symbol_name: str, symbol_path: str, universe: dict[str, An
 
 def get_index_class(asset_name: str, universe: dict[str, Any]) -> str:
     name_lower = asset_name.lower()
+    # Banned families must not inherit a tradeable class (e.g. Multi Step → Step,
+    # Spot Up - Volatility Up → Volatility) via substring keywords.
+    for keyword in universe.get("exclude_keywords") or []:
+        if str(keyword).lower() in name_lower:
+            return "Other"
     # Longest keyword first so "sfx vol" wins over "fx vol".
     pairs = [p for p in (universe.get("index_class_keywords") or []) if len(p) >= 2]
     pairs.sort(key=lambda p: len(str(p[1])), reverse=True)
