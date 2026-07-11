@@ -1,0 +1,682 @@
+[
+    {
+        "Asset": "Volatility 10 Index",
+        "Min Lot": 0.5,
+        "Min-Margin ($)": 0.48,
+        "Volume Limit": 1280.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 4837.217,
+        "Daily Close": 4798.658,
+        "Daily Change": 0.686004,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Volatility 25 Index",
+        "Min Lot": 0.5,
+        "Min-Margin ($)": 0.33,
+        "Volume Limit": 1200.0,
+        "Velocity (pips/min)": 1.6197,
+        "Pip Value ($/min)": 0.8098,
+        "Current Price": 2659.091,
+        "Daily Close": 2772.995,
+        "Daily Change": -2.87927,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Volatility 50 Index",
+        "Min Lot": 4.0,
+        "Min-Margin ($)": 0.14,
+        "Volume Limit": 12000.0,
+        "Velocity (pips/min)": 0.0645,
+        "Pip Value ($/min)": 0.258,
+        "Current Price": 88.0033,
+        "Daily Close": 85.775,
+        "Daily Change": 1.354124,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Volatility 75 Index",
+        "Min Lot": 0.01,
+        "Min-Margin ($)": 0.56,
+        "Volume Limit": 50.0,
+        "Velocity (pips/min)": 74.4983,
+        "Pip Value ($/min)": 0.745,
+        "Current Price": 55699.24,
+        "Daily Close": 53124.69,
+        "Daily Change": 3.817208,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Volatility 100 Index",
+        "Min Lot": 1.0,
+        "Min-Margin ($)": 0.46,
+        "Volume Limit": 660.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 455.48,
+        "Daily Close": 449.01,
+        "Daily Change": 2.928665,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Volatility 10 (1s) Index",
+        "Min Lot": 0.5,
+        "Min-Margin ($)": 0.95,
+        "Volume Limit": 810.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 9524.2,
+        "Daily Close": 9478.29,
+        "Daily Change": 0.393214,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "BUY",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Volatility 15 (1s) Index",
+        "Min Lot": 0.2,
+        "Min-Margin ($)": 0.83,
+        "Volume Limit": 370.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 12514.827,
+        "Daily Close": null,
+        "Daily Change": null,
+        "Bias": {
+            "M1": null,
+            "M5": null,
+            "M15": null,
+            "M30": null
+        }
+    },
+    {
+        "Asset": "Volatility 25 (1s) Index",
+        "Min Lot": 0.005,
+        "Min-Margin ($)": 0.99,
+        "Volume Limit": 5.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 795937.91,
+        "Daily Close": null,
+        "Daily Change": null,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Volatility 30 (1s) Index",
+        "Min Lot": 0.2,
+        "Min-Margin ($)": 0.67,
+        "Volume Limit": 360.0,
+        "Velocity (pips/min)": 5.1422,
+        "Pip Value ($/min)": 1.0284,
+        "Current Price": 6744.302,
+        "Daily Close": 7073.739,
+        "Daily Change": -3.28132,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Volatility 50 (1s) Index",
+        "Min Lot": 0.005,
+        "Min-Margin ($)": 0.38,
+        "Volume Limit": 8.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 226574.7,
+        "Daily Close": 231843.42,
+        "Daily Change": -4.951648,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Volatility 75 (1s) Index",
+        "Min Lot": 0.05,
+        "Min-Margin ($)": 0.17,
+        "Volume Limit": 240.0,
+        "Velocity (pips/min)": 8.2659,
+        "Pip Value ($/min)": 0.4133,
+        "Current Price": 6801.37,
+        "Daily Close": 6430.3,
+        "Daily Change": 4.592943,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Volatility 90 (1s) Index",
+        "Min Lot": 0.1,
+        "Min-Margin ($)": 1.05,
+        "Volume Limit": 60.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 10467.06,
+        "Daily Close": 9861.55,
+        "Daily Change": 2.202777,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Volatility 100 (1s) Index",
+        "Min Lot": 1.0,
+        "Min-Margin ($)": 0.61,
+        "Volume Limit": 430.0,
+        "Velocity (pips/min)": 1.1086,
+        "Pip Value ($/min)": 1.1086,
+        "Current Price": 921.2,
+        "Daily Close": null,
+        "Daily Change": null,
+        "Bias": {
+            "M1": null,
+            "M5": null,
+            "M15": null,
+            "M30": null
+        }
+    },
+    {
+        "Asset": "Volatility 150 (1s) Index",
+        "Min Lot": 1.0,
+        "Min-Margin ($)": 0.1,
+        "Volume Limit": 50.0,
+        "Velocity (pips/min)": 0.0948,
+        "Pip Value ($/min)": 0.0948,
+        "Current Price": 49.35,
+        "Daily Close": null,
+        "Daily Change": null,
+        "Bias": {
+            "M1": null,
+            "M5": null,
+            "M15": null,
+            "M30": null
+        }
+    },
+    {
+        "Asset": "Volatility 250 (1s) Index",
+        "Min Lot": 10.0,
+        "Min-Margin ($)": 0.01,
+        "Volume Limit": 50.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 0.28359,
+        "Daily Close": 0.25591,
+        "Daily Change": 10.816303,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Volatility 5 Index",
+        "Min Lot": 0.05,
+        "Min-Margin ($)": 0.8,
+        "Volume Limit": 150.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 95660.086,
+        "Daily Close": 95457.785,
+        "Daily Change": 0.216943,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Volatility 5 (1s) Index",
+        "Min Lot": 0.05,
+        "Min-Margin ($)": 0.81,
+        "Volume Limit": 150.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 97757.68,
+        "Daily Close": 97818.65,
+        "Daily Change": -0.051902,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Volatility 15 Index",
+        "Min Lot": 0.1,
+        "Min-Margin ($)": 3.19,
+        "Volume Limit": 50.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 95501.432,
+        "Daily Close": 95143.525,
+        "Daily Change": 0.025261,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "SELL",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Volatility 30 Index",
+        "Min Lot": 0.05,
+        "Min-Margin ($)": 2.82,
+        "Volume Limit": 20.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 112812.497,
+        "Daily Close": null,
+        "Daily Change": null,
+        "Bias": {
+            "M1": null,
+            "M5": null,
+            "M15": null,
+            "M30": null
+        }
+    },
+    {
+        "Asset": "Volatility 90 Index",
+        "Min Lot": 0.05,
+        "Min-Margin ($)": 7.56,
+        "Volume Limit": 6.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 151566.393,
+        "Daily Close": 147971.426,
+        "Daily Change": 3.479747,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Step Index",
+        "Min Lot": 0.1,
+        "Min-Margin ($)": 0.78,
+        "Volume Limit": 270.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 7768.3,
+        "Daily Close": 7741.8,
+        "Daily Change": 0.360381,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Step Index 200",
+        "Min Lot": 0.1,
+        "Min-Margin ($)": 2.03,
+        "Volume Limit": 70.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 10158.7,
+        "Daily Close": 10201.3,
+        "Daily Change": -0.396028,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Step Index 300",
+        "Min Lot": 0.1,
+        "Min-Margin ($)": 4.38,
+        "Volume Limit": 45.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 13136.1,
+        "Daily Close": 13077.0,
+        "Daily Change": 0.252351,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "SELL",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Step Index 400",
+        "Min Lot": 0.1,
+        "Min-Margin ($)": 3.39,
+        "Volume Limit": 50.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 8478.2,
+        "Daily Close": 8259.4,
+        "Daily Change": 2.818607,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Step Index 500",
+        "Min Lot": 0.1,
+        "Min-Margin ($)": 1.48,
+        "Volume Limit": 45.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 2947.3,
+        "Daily Close": null,
+        "Daily Change": null,
+        "Bias": {
+            "M1": null,
+            "M5": null,
+            "M15": null,
+            "M30": null
+        }
+    },
+    {
+        "Asset": "Jump 10 Index",
+        "Min Lot": 0.01,
+        "Min-Margin ($)": 0.38,
+        "Volume Limit": 20.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 95427.52,
+        "Daily Close": 97617.22,
+        "Daily Change": -1.967225,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Jump 100 Index",
+        "Min Lot": 0.1,
+        "Min-Margin ($)": 0.1,
+        "Volume Limit": 170.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 245.27,
+        "Daily Close": 262.64,
+        "Daily Change": -8.281298,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Jump 25 Index",
+        "Min Lot": 0.01,
+        "Min-Margin ($)": 0.97,
+        "Volume Limit": 7.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 116495.28,
+        "Daily Close": 115686.91,
+        "Daily Change": 1.453691,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Jump 50 Index",
+        "Min Lot": 0.01,
+        "Min-Margin ($)": 1.17,
+        "Volume Limit": 14.0,
+        "Velocity (pips/min)": 76.0477,
+        "Pip Value ($/min)": 0.7605,
+        "Current Price": 69912.24,
+        "Daily Close": 65635.56,
+        "Daily Change": 5.338646,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Jump 75 Index",
+        "Min Lot": 0.01,
+        "Min-Margin ($)": 0.18,
+        "Volume Limit": 20.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 7175.53,
+        "Daily Close": 7170.34,
+        "Daily Change": -0.598716,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Crash 1000 Index",
+        "Min Lot": 0.2,
+        "Min-Margin ($)": 1.96,
+        "Volume Limit": 720.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 5887.1835,
+        "Daily Close": 5866.27,
+        "Daily Change": -0.241985,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Crash 500 Index",
+        "Min Lot": 0.2,
+        "Min-Margin ($)": 1.44,
+        "Volume Limit": 730.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 2886.167,
+        "Daily Close": 2844.166,
+        "Daily Change": 1.262409,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Crash 300 Index",
+        "Min Lot": 0.5,
+        "Min-Margin ($)": 8.07,
+        "Volume Limit": 515.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 1615.938,
+        "Daily Close": 1529.589,
+        "Daily Change": 0.481502,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Crash 900 Index",
+        "Min Lot": 0.2,
+        "Min-Margin ($)": 9.05,
+        "Volume Limit": 160.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 18094.775,
+        "Daily Close": 18022.0,
+        "Daily Change": -0.097087,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Crash 600 Index",
+        "Min Lot": 0.2,
+        "Min-Margin ($)": 11.47,
+        "Volume Limit": 120.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 22938.502,
+        "Daily Close": 22729.381,
+        "Daily Change": 1.717609,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Boom 1000 Index",
+        "Min Lot": 0.2,
+        "Min-Margin ($)": 4.82,
+        "Volume Limit": 250.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 14446.9662,
+        "Daily Close": 14512.337,
+        "Daily Change": -0.450353,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Boom 500 Index",
+        "Min Lot": 0.2,
+        "Min-Margin ($)": 2.49,
+        "Volume Limit": 450.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 4970.574,
+        "Daily Close": 5086.765,
+        "Daily Change": -1.446401,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Boom 300 Index",
+        "Min Lot": 0.5,
+        "Min-Margin ($)": 5.86,
+        "Volume Limit": 475.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 1170.952,
+        "Daily Close": 1130.453,
+        "Daily Change": 0.909547,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "BUY",
+            "M15": "BUY",
+            "M30": "BUY"
+        }
+    },
+    {
+        "Asset": "Boom 900 Index",
+        "Min Lot": 0.2,
+        "Min-Margin ($)": 4.19,
+        "Volume Limit": 340.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 8374.761,
+        "Daily Close": 8454.887,
+        "Daily Change": -0.947298,
+        "Bias": {
+            "M1": "SELL",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    },
+    {
+        "Asset": "Boom 600 Index",
+        "Min Lot": 0.2,
+        "Min-Margin ($)": 2.73,
+        "Volume Limit": 400.0,
+        "Velocity (pips/min)": null,
+        "Pip Value ($/min)": null,
+        "Current Price": 5457.728,
+        "Daily Close": 5429.907,
+        "Daily Change": -0.775851,
+        "Bias": {
+            "M1": "BUY",
+            "M5": "SELL",
+            "M15": "SELL",
+            "M30": "SELL"
+        }
+    }
+]

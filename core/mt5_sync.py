@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -14,6 +15,8 @@ else:
 SNAPSHOT_FILE = Path(__file__).resolve().parent.parent / "asset_snapshot.json"
 EXPORT_FILE_PREFIX = "asset_snapshot_"
 EXPORT_FILE_SUFFIX = ".json"
+# Exporter JSON older than this is treated as stale; live MT5 EMA bias is preferred.
+EXPORT_MAX_AGE_SECONDS = 5 * 60
 
 # These constants are generic defaults for the MT5 custom indicator query.
 # Update INDICATOR_PATH and buffer indexes if you use iCustom instead of file export.
@@ -53,11 +56,14 @@ def _mt5_files_folder() -> Path | None:
 
 
 def _discover_export_folder() -> Path | None:
-    """Find the MT5 Files folder that contains MOLD_EMPIRE_EXPORTER snapshots."""
+    """Find the MT5 Files folder that contains MOLD_EMPIRE_EXPORTER snapshots.
+
+    Always prefer the *currently connected* terminal's MQL5/Files folder so
+    Filter Assets reads the same Files directory the open charts write to.
+    """
     connected = _mt5_files_folder()
     if connected is not None and connected.exists():
-        if any(connected.glob(f"{EXPORT_FILE_PREFIX}*{EXPORT_FILE_SUFFIX}")):
-            return connected
+        return connected
 
     terminals_root = Path.home() / "AppData" / "Roaming" / "MetaQuotes" / "Terminal"
     if terminals_root.exists():
@@ -71,7 +77,7 @@ def _discover_export_folder() -> Path | None:
         if best is not None:
             return best
 
-    return connected if connected is not None and connected.exists() else None
+    return None
 
 
 def _export_path_for_symbol(symbol: str, export_folder: Path) -> Path:
@@ -87,8 +93,12 @@ def _indicator_export_path(symbol: str) -> Path | None:
 
 
 def _load_json_dict(path: Path) -> dict | None:
+    """Read a JSON object from disk, bypassing Python/OS buffered stale handles."""
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        # Open+stat each call so Filter Assets always sees the latest exporter write.
+        with path.open("r", encoding="utf-8") as handle:
+            handle.seek(0)
+            data = json.load(handle)
         if isinstance(data, dict):
             return data
     except (json.JSONDecodeError, OSError):
@@ -249,23 +259,44 @@ def compute_live_bias_snapshot(symbol: str) -> dict | None:
     }
 
 
+def _export_is_fresh(path: Path, max_age_seconds: float = EXPORT_MAX_AGE_SECONDS) -> bool:
+    try:
+        age = time.time() - path.stat().st_mtime
+    except OSError:
+        return False
+    return 0 <= age <= max_age_seconds
+
+
 def _load_bias_snapshot(
     symbol: str,
     export_folder: Path | None,
     allow_live_mt5: bool,
+    *,
+    prefer_live_if_stale: bool = True,
 ) -> tuple[dict | None, str]:
-    """Return (snapshot, source) where source is 'export', 'live', or 'none'."""
+    """Return (snapshot, source) where source is 'export', 'live', or 'none'.
+
+    Reads exporter JSON from disk on every call. Fresh files win. When the file
+    is older than EXPORT_MAX_AGE_SECONDS (indicator stopped writing), fall
+    through to live MT5 so Filter matches what open charts show.
+    """
+    stale_export: dict | None = None
     if export_folder is not None and export_folder.exists():
         path = _export_path_for_symbol(symbol, export_folder)
         if path.exists():
             exported = _load_json_dict(path)
             if exported:
-                return exported, "export"
+                if not prefer_live_if_stale or _export_is_fresh(path):
+                    return exported, "export"
+                stale_export = exported
 
     if allow_live_mt5:
         live = compute_live_bias_snapshot(symbol)
         if live:
             return live, "live"
+
+    if stale_export is not None:
+        return stale_export, "export"
 
     return None, "none"
 
@@ -283,7 +314,7 @@ def get_export_directions(
     if export_folder is not None:
         folder: Path | None = Path(export_folder)
     else:
-        folder = _discover_export_folder()
+        folder = _mt5_files_folder() or _discover_export_folder()
 
     directions: dict[str, str] = {}
     for symbol in symbols:
@@ -422,9 +453,9 @@ def filter_assets_from_exports(
     - M1, M5, M15, M30 all BUY or all SELL
     - Daily change and price vs daily close confirm that direction
 
-    Prefers per-symbol JSON exports from MOLD_EMPIRE_EXPORTER when available.
-    When exports are missing (typical for Weltrade), computes the same rules
-    live from MT5 EMA(50)/EMA(110) + daily change.
+    Each call re-reads per-symbol JSON from the connected terminal's MQL5/Files
+    folder. Fresh exports win; stale exports fall back to live MT5 EMA bias so
+    Filter matches what open charts show.
 
     Returns:
       {
@@ -445,7 +476,8 @@ def filter_assets_from_exports(
     if export_folder is not None:
         folder: Path | None = Path(export_folder)
     else:
-        folder = _discover_export_folder()
+        # Prefer the live connected terminal so we never read another profile's Files.
+        folder = _mt5_files_folder() or _discover_export_folder()
 
     for asset in asset_data:
         symbol = asset.get("Asset")
@@ -471,7 +503,8 @@ def filter_assets_from_exports(
             reasons[symbol] = "no bias data"
             continue
 
-        sources_used.add(source)
+        if source in {"export", "live"}:
+            sources_used.add(source)
         ok, direction, reason = _has_one_directional_bias(snapshot)
         if direction:
             directions[symbol] = direction

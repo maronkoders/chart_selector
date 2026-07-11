@@ -1,0 +1,1216 @@
+//+------------------------------------------------------------------+
+//|                                   MOLD_EMPIRE_V5_FIXED.mq5       |
+//|                                         Infynite Solutions        |
+//|  EMA Ribbon (50-110, step 5) — Multi-TF Signal + Dashboard       |
+//|  FIXED: M1 alerts fire when M5+M15+M30 all agree direction       |
+//|  ADDED: M15 Swing High/Low detection with persistent HLINEs      |
+//|  FIXED: Swing detection limited to after previous daily close      |
+//|  FIXED (v5.42): Only the single nearest confirmed swing high     |
+//|     and swing low are tracked/drawn. Lines are moved in place    |
+//|     (never deleted+recreated) and persist across timeframe       |
+//|     changes / indicator reinit via MT5 Global Variables.         |
+//|                                                                   |
+//|  FIXES APPLIED:                                                   |
+//|  1. MTFDataReady() — checks completed bars (shift 1), not bar[0] |
+//|  2. GetBias() — reads 2 completed bars, uses bar[1] of HTF       |
+//|  3. DetectCrossover() — skips live bar[0], uses bars[1] vs [2]   |
+//|  4. g_lastSigXX — cooldown-based reset, not hard session lock    |
+//|  5. Push/Alert diagnostics logged to Experts tab on every bar    |
+//|  6. CLEANUP: removed dashboard filter-preview rows                |
+//|     (M1 XO / SPREAD / STACK / SLOPE / PULLBK / LAST) — these     |
+//|     only duplicated a filter check for display and did not       |
+//|     affect signal logic, which still runs unchanged inside       |
+//|     ProcessTFSignal().                                           |
+//|  7. ADDED: M15 Swing High/Low wick detection with persistent     |
+//|     horizontal lines that survive timeframe changes.             |
+//|  8. FIXED: Swing detection only scans from previous daily close  |
+//|     forward. Anything before the current trading day is ignored. |
+//|  9. FIXED (v5.42): Only 2 lines total (nearest swing high +      |
+//|     nearest swing low). Updated in place. Persist via Global     |
+//|     Variables so timeframe switches don't redraw/duplicate them. |
+//+------------------------------------------------------------------+
+#property copyright   "Infynite Solutions"
+#property version     "5.42"
+#property description "MOLD_EMPIRE_V5_FIXED | M1 alerts confirmed by M5+M15+M30 | M15 nearest SwingHL, persistent"
+#property indicator_chart_window
+#property indicator_buffers 13
+#property indicator_plots   13
+
+//─────────────────────────────────────────────────────────────────────────────
+//  INPUTS
+//─────────────────────────────────────────────────────────────────────────────
+input group "═══ Notifications ═══"
+input bool   EnableAlerts        = true;
+input bool   EnablePush          = true;
+input bool   EnableEmail         = false;
+
+input group "═══ Signals to fire ═══"
+input bool   SignalM1            = true;   // M1 crossover confirmed by M5+M15+M30
+input bool   SignalM5            = false;  // M5 crossover confirmed by M15+M30
+input bool   SignalM15           = false;  // M15 crossover confirmed by M30
+input bool   SignalM30           = false;  // M30 standalone signal
+
+input group "═══ Visual ═══"
+input int    LineWidth           = 2;
+input bool   DrawHistorical      = true;
+input bool   ShowDashboard       = true;
+
+input group "═══ Debug ═══"
+input bool   DebugMode           = true;   // DEFAULT TRUE so you can see why signals block
+
+input group "═══ Stack Quality Filter ═══"
+input bool   UseStackFilter      = true;
+input int    MinStackScore       = 8;      // Reduced from 10 — 10 was too strict
+
+input group "═══ Ribbon Spread Filter ═══"
+input bool   UseSpreadFilter     = true;
+input double MinSpreadPoints     = 0.0;    // 0 = auto
+input double MaxSpreadPoints     = 0.0;    // 0 = auto
+
+input group "═══ Ribbon Slope Filter ═══"
+input bool   UseSlopeFilter      = true;
+input int    SlopeLookback       = 5;
+input double MinSlopeThreshold   = 0.000001;
+
+input group "═══ Pullback Zone Filter ═══"
+input bool   UsePullbackFilter   = false;
+input double MaxExtensionPct     = 0.005;
+
+input group "═══ M1 Filter Overrides ═══"
+input bool   M1IgnoreSpread      = true;
+input bool   M1IgnoreSlope       = false;
+
+input group "═══ Signal Cooldown (bars) ═══"
+input int    CooldownBarsM1      = 5;      // After M1 signal, bars before same-dir allowed again
+input int    CooldownBarsM5      = 3;
+input int    CooldownBarsM15     = 3;
+input int    CooldownBarsM30     = 3;
+
+input group "═══ Daily Close Reference ═══"
+input bool   ShowDailyCloseLine     = true;  // Draw horizontal line at prev-day close
+input color  DailyCloseLineColor    = clrYellow;
+
+input group "═══ M15 Swing High/Low (nearest only) ═══"
+input bool   EnableM15SwingHL       = true;   // Enable M15 nearest swing high/low tracking
+input int    SwingLeftBars          = 5;      // Bars to left for swing confirmation
+input int    SwingRightBars         = 5;      // Bars to right for swing confirmation
+input int    SwingMinDistancePoints = 50;     // Min price move (pts) before an existing line is replaced
+input color  SwingHighColor         = clrRed;
+input color  SwingLowColor          = clrRoyalBlue;
+input int    SwingLineWidth         = 2;
+
+//─────────────────────────────────────────────────────────────────────────────
+//  DISPLAY BUFFERS
+//─────────────────────────────────────────────────────────────────────────────
+double EMA50[],EMA55[],EMA60[],EMA65[],EMA70[];
+double EMA75[],EMA80[],EMA85[],EMA90[],EMA95[];
+double EMA100[],EMA105[],EMA110[];
+
+//─────────────────────────────────────────────────────────────────────────────
+//  HANDLES
+//─────────────────────────────────────────────────────────────────────────────
+int h50,h55,h60,h65,h70,h75,h80,h85,h90,h95,h100,h105,h110;
+
+int hM1_fast,  hM1_slow,  hM1_mid;
+int hM5_fast,  hM5_slow,  hM5_mid;
+int hM15_fast, hM15_slow, hM15_mid;
+int hM30_fast, hM30_slow, hM30_mid;
+
+int hSt0,hSt1,hSt2,hSt3,hSt4,hSt5,hSt6;
+int hSt7,hSt8,hSt9,hSt10,hSt11,hSt12;
+
+//─────────────────────────────────────────────────────────────────────────────
+//  STATE
+//─────────────────────────────────────────────────────────────────────────────
+// Per-TF: last signal direction + the bar-counter value when it fired
+int      g_lastSigM1   = 0,  g_lastSigBarM1  = 0;
+int      g_lastSigM5   = 0,  g_lastSigBarM5  = 0;
+int      g_lastSigM15  = 0,  g_lastSigBarM15 = 0;
+int      g_lastSigM30  = 0,  g_lastSigBarM30 = 0;
+
+// Monotonic bar counter incremented once per new M1 bar
+int      g_barCounter     = 0;
+
+datetime g_lastBarTime    = 0;
+int      g_lineCounter    = 0;
+bool     g_histDone       = false;
+double   g_minSpread      = 0;
+double   g_maxSpread      = 0;
+string   DASH_PREFIX      = "EMADASH_";
+
+// M15 Swing High/Low state — only ONE high + ONE low tracked
+double   g_lastSwingHighPrice = 0;
+double   g_lastSwingLowPrice  = 0;
+datetime g_lastSwingHighTime  = 0;
+datetime g_lastSwingLowTime   = 0;
+datetime g_prevDayCloseTime   = 0;    // Time of previous daily close (start of current session)
+
+// Fixed object names — never counter-suffixed, so they are moved, not recreated
+#define SWING_HIGH_NAME  "SWING_HIGH_NEAREST_M15"
+#define SWING_LOW_NAME   "SWING_LOW_NEAREST_M15"
+
+// Global Variable names (persist across TF changes / indicator reinit)
+string g_gvHP, g_gvHT, g_gvLP, g_gvLT;
+
+//─────────────────────────────────────────────────────────────────────────────
+//  STACK HANDLE LOOKUP
+//─────────────────────────────────────────────────────────────────────────────
+int StackHandle(int idx)
+  {
+   switch(idx)
+     {
+      case 0:  return hSt0;  case 1:  return hSt1;
+      case 2:  return hSt2;  case 3:  return hSt3;
+      case 4:  return hSt4;  case 5:  return hSt5;
+      case 6:  return hSt6;  case 7:  return hSt7;
+      case 8:  return hSt8;  case 9:  return hSt9;
+      case 10: return hSt10; case 11: return hSt11;
+      default: return hSt12;
+     }
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  MTF DATA READINESS CHECK
+//─────────────────────────────────────────────────────────────────────────────
+bool MTFDataReady()
+  {
+   double tmp[];
+   if(CopyBuffer(hM1_fast, 0,1,3,tmp)<3) return false;
+   if(CopyBuffer(hM1_slow, 0,1,3,tmp)<3) return false;
+   if(CopyBuffer(hM5_fast, 0,1,3,tmp)<3) return false;
+   if(CopyBuffer(hM5_slow, 0,1,3,tmp)<3) return false;
+   if(CopyBuffer(hM15_fast,0,1,3,tmp)<3) return false;
+   if(CopyBuffer(hM15_slow,0,1,3,tmp)<3) return false;
+   if(CopyBuffer(hM30_fast,0,1,3,tmp)<3) return false;
+   if(CopyBuffer(hM30_slow,0,1,3,tmp)<3) return false;
+   return true;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  PLOT SETUP
+//─────────────────────────────────────────────────────────────────────────────
+void SetPlot(int idx, string label, color clr, int width=4)
+  {
+   PlotIndexSetString (idx,PLOT_LABEL,      label);
+   PlotIndexSetInteger(idx,PLOT_DRAW_TYPE,  DRAW_LINE);
+   PlotIndexSetInteger(idx,PLOT_LINE_COLOR, clr);
+   PlotIndexSetInteger(idx,PLOT_LINE_WIDTH, width);
+   PlotIndexSetInteger(idx,PLOT_LINE_STYLE, STYLE_SOLID);
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  VERTICAL LINES (EMA Crossover signals)
+//─────────────────────────────────────────────────────────────────────────────
+void DrawVLine(datetime bar_time, int direction, string tf_label)
+  {
+   color  clr  = (direction==1) ? clrBlue : clrRed;
+   string side = (direction==1) ? "BUY"   : "SELL";
+   string name = StringFormat("EMA_VL_%s_%s_%d", side, tf_label, g_lineCounter++);
+   if(ObjectFind(0,name)>=0) ObjectDelete(0,name);
+   ObjectCreate(0,name,OBJ_VLINE,0,bar_time,0);
+   ObjectSetInteger(0,name,OBJPROP_COLOR,      clr);
+   ObjectSetInteger(0,name,OBJPROP_WIDTH,      LineWidth);
+   ObjectSetInteger(0,name,OBJPROP_STYLE,      STYLE_SOLID);
+   ObjectSetInteger(0,name,OBJPROP_BACK,       true);
+   ObjectSetInteger(0,name,OBJPROP_SELECTABLE, false);
+   ObjectSetString (0,name,OBJPROP_TOOLTIP,
+      StringFormat("%s %s | EMA50xEMA110 | %s",
+         tf_label, side, TimeToString(bar_time,TIME_DATE|TIME_MINUTES)));
+  }
+
+void DeleteAllVLines()
+  {
+   for(int i=ObjectsTotal(0)-1; i>=0; i--)
+     {
+      string nm=ObjectName(0,i);
+      if(StringFind(nm,"EMA_VL_")==0) ObjectDelete(0,nm);
+     }
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  GET PREVIOUS DAILY CLOSE TIME — for swing scan boundary
+//─────────────────────────────────────────────────────────────────────────────
+//+------------------------------------------------------------------+
+//| Returns the open time of the PREVIOUS completed D1 candle.        |
+//| This is effectively the "start of the current trading day" —       |
+//| all M15 swings before this time are ignored.                       |
+//+------------------------------------------------------------------+
+datetime GetPrevDayCloseTime()
+  {
+   datetime times[];
+   if(CopyTime(_Symbol, PERIOD_D1, 0, 2, times) < 2) return 0;
+   // times[0] = current (forming) D1 bar open time
+   // times[1] = previous completed D1 bar open time
+   // The previous daily close = open time of current D1 bar
+   return times[0];
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  M15 SWING HIGH/LOW DETECTION — WICK BASED, DAILY BOUNDARY
+//  Only the single NEAREST confirmed swing high and swing low are kept.
+//─────────────────────────────────────────────────────────────────────────────
+
+//+------------------------------------------------------------------+
+//| Check if shift is a confirmed Swing High (wick-based) on M15     |
+//+------------------------------------------------------------------+
+bool IsM15SwingHigh(int shift, int leftBars, int rightBars)
+  {
+   double currentHigh = iHigh(_Symbol, PERIOD_M15, shift);
+   if(currentHigh == 0) return false;
+
+   for(int i = 1; i <= leftBars; i++)
+     {
+      double leftHigh = iHigh(_Symbol, PERIOD_M15, shift + i);
+      if(leftHigh == 0 || leftHigh >= currentHigh)
+         return false;
+     }
+
+   for(int i = 1; i <= rightBars; i++)
+     {
+      int rightShift = shift - i;
+      if(rightShift < 0) return false;
+      double rightHigh = iHigh(_Symbol, PERIOD_M15, rightShift);
+      if(rightHigh == 0 || rightHigh >= currentHigh)
+         return false;
+     }
+
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| Check if shift is a confirmed Swing Low (wick-based) on M15      |
+//+------------------------------------------------------------------+
+bool IsM15SwingLow(int shift, int leftBars, int rightBars)
+  {
+   double currentLow = iLow(_Symbol, PERIOD_M15, shift);
+   if(currentLow == 0) return false;
+
+   for(int i = 1; i <= leftBars; i++)
+     {
+      double leftLow = iLow(_Symbol, PERIOD_M15, shift + i);
+      if(leftLow == 0 || leftLow <= currentLow)
+         return false;
+     }
+
+   for(int i = 1; i <= rightBars; i++)
+     {
+      int rightShift = shift - i;
+      if(rightShift < 0) return false;
+      double rightLow = iLow(_Symbol, PERIOD_M15, rightShift);
+      if(rightLow == 0 || rightLow <= currentLow)
+         return false;
+     }
+
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| Create the ray/label if missing, otherwise MOVE it in place.     |
+//| Never deletes + recreates — this is what stops over-drawing.     |
+//| Uses OBJ_TREND with RAY_LEFT=true / RAY_RIGHT=false so the line  |
+//| is anchored AT the swing point and extends only to the left      |
+//| (backward into history) instead of drawing across the whole      |
+//| chart in both directions like an OBJ_HLINE would.                |
+//+------------------------------------------------------------------+
+void UpdateOrCreateSwingLine(double price, datetime time, bool isHigh)
+  {
+   string name      = isHigh ? SWING_HIGH_NAME : SWING_LOW_NAME;
+   string labelName = name + "_LBL";
+   color  lineColor = isHigh ? SwingHighColor : SwingLowColor;
+
+   // Second anchor point, purely to establish "leftward" direction.
+   // RAY_LEFT extends the line infinitely past this point anyway, so the
+   // exact offset doesn't matter — it just needs to sit earlier in time.
+   int      periodSeconds = PeriodSeconds(PERIOD_M15);
+   datetime leftAnchorTime = time - (datetime)(50 * periodSeconds);
+
+   if(ObjectFind(0, name) < 0)
+     {
+      if(!ObjectCreate(0, name, OBJ_TREND, 0, time, price, leftAnchorTime, price))
+        {
+         Print("Failed to create swing ray: ", name, " err=", GetLastError());
+         return;
+        }
+      ObjectSetInteger(0, name, OBJPROP_COLOR,      lineColor);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH,      SwingLineWidth);
+      ObjectSetInteger(0, name, OBJPROP_STYLE,      STYLE_SOLID);
+      ObjectSetInteger(0, name, OBJPROP_BACK,       false);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, true);
+      ObjectSetInteger(0, name, OBJPROP_RAY_RIGHT,  false);  // stop exactly at the swing point
+      ObjectSetInteger(0, name, OBJPROP_RAY_LEFT,   true);   // extend backward into history
+     }
+   else
+     {
+      // Ray already exists — just move both anchor points, don't touch styling/creation
+      ObjectSetInteger(0, name, OBJPROP_TIME,  0, time);
+      ObjectSetDouble (0, name, OBJPROP_PRICE, 0, price);
+      ObjectSetInteger(0, name, OBJPROP_TIME,  1, leftAnchorTime);
+      ObjectSetDouble (0, name, OBJPROP_PRICE, 1, price);
+     }
+
+   ObjectSetString(0, name, OBJPROP_TOOLTIP,
+      StringFormat("%s | %.5f | %s",
+         isHigh ? "Swing High" : "Swing Low",
+         price,
+         TimeToString(time, TIME_DATE|TIME_MINUTES)));
+
+   string labelText = isHigh ? "SWING HIGH - M15" : "SWING LOW - M15";
+
+   if(ObjectFind(0, labelName) < 0)
+     {
+      if(ObjectCreate(0, labelName, OBJ_TEXT, 0, time, price))
+        {
+         ObjectSetString (0, labelName, OBJPROP_TEXT,      labelText);
+         ObjectSetInteger(0, labelName, OBJPROP_COLOR,     lineColor);
+         ObjectSetInteger(0, labelName, OBJPROP_FONTSIZE,  8);
+         ObjectSetString (0, labelName, OBJPROP_FONT,      "Consolas");
+         ObjectSetInteger(0, labelName, OBJPROP_ANCHOR,    ANCHOR_LEFT_UPPER);
+         ObjectSetInteger(0, labelName, OBJPROP_SELECTABLE, false);
+        }
+     }
+   else
+     {
+      ObjectMove(0, labelName, 0, time, price);
+      ObjectSetString(0, labelName, OBJPROP_TEXT, labelText);
+     }
+
+   if(DebugMode)
+      Print(StringFormat(">> M15 %s @ %.5f | time=%s",
+         isHigh ? "SWING HIGH (nearest)" : "SWING LOW (nearest)",
+         price,
+         TimeToString(time, TIME_DATE|TIME_MINUTES)));
+  }
+
+//+------------------------------------------------------------------+
+//| Delete the two swing lines/labels (called only on true removal)  |
+//+------------------------------------------------------------------+
+void DeleteAllSwingLines()
+  {
+   string names[4] = { SWING_HIGH_NAME, SWING_HIGH_NAME+"_LBL",
+                        SWING_LOW_NAME,  SWING_LOW_NAME+"_LBL" };
+   for(int i=0;i<4;i++)
+      if(ObjectFind(0,names[i])>=0) ObjectDelete(0,names[i]);
+
+   g_lastSwingHighPrice = 0;
+   g_lastSwingLowPrice  = 0;
+   g_lastSwingHighTime  = 0;
+   g_lastSwingLowTime   = 0;
+  }
+
+//+------------------------------------------------------------------+
+//| Load persisted swing state from Global Variables (survives TF     |
+//| changes / indicator reinit) and re-anchor the existing lines      |
+//| WITHOUT rescanning history — this is the "draw once" path.        |
+//+------------------------------------------------------------------+
+void LoadSwingStateFromGlobals()
+  {
+   if(GlobalVariableCheck(g_gvHP) && GlobalVariableCheck(g_gvHT))
+     {
+      double hp = GlobalVariableGet(g_gvHP);
+      datetime ht = (datetime)GlobalVariableGet(g_gvHT);
+      if(hp > 0 && ht > 0)
+        {
+         g_lastSwingHighPrice = hp;
+         g_lastSwingHighTime  = ht;
+         UpdateOrCreateSwingLine(hp, ht, true);
+        }
+     }
+   if(GlobalVariableCheck(g_gvLP) && GlobalVariableCheck(g_gvLT))
+     {
+      double lp = GlobalVariableGet(g_gvLP);
+      datetime lt = (datetime)GlobalVariableGet(g_gvLT);
+      if(lp > 0 && lt > 0)
+        {
+         g_lastSwingLowPrice = lp;
+         g_lastSwingLowTime  = lt;
+         UpdateOrCreateSwingLine(lp, lt, false);
+        }
+     }
+  }
+
+//+------------------------------------------------------------------+
+//| Find the single nearest confirmed swing high and swing low       |
+//| (nearest = most recently confirmed, closest to current price)    |
+//| within the current trading day boundary.                          |
+//+------------------------------------------------------------------+
+void FindNearestM15Swings(double &outHighPrice, datetime &outHighTime,
+                           double &outLowPrice,  datetime &outLowTime)
+  {
+   outHighPrice = 0; outHighTime = 0;
+   outLowPrice  = 0; outLowTime  = 0;
+
+   g_prevDayCloseTime = GetPrevDayCloseTime();
+   if(g_prevDayCloseTime == 0) return;
+
+   int totalM15 = iBars(_Symbol, PERIOD_M15);
+   if(totalM15 < SwingLeftBars + SwingRightBars + 10) return;
+
+   int startShift = iBarShift(_Symbol, PERIOD_M15, g_prevDayCloseTime);
+   if(startShift < 0) return;
+
+   int maxShift = MathMin(startShift, totalM15 - SwingRightBars - 1);
+   int minShift = SwingRightBars;
+
+   for(int shift = minShift; shift <= maxShift; shift++)
+     {
+      datetime st = iTime(_Symbol, PERIOD_M15, shift);
+      if(st < g_prevDayCloseTime) break;
+
+      if(outHighPrice == 0 && IsM15SwingHigh(shift, SwingLeftBars, SwingRightBars))
+        {
+         outHighPrice = iHigh(_Symbol, PERIOD_M15, shift);
+         outHighTime  = st;
+        }
+      if(outLowPrice == 0 && IsM15SwingLow(shift, SwingLeftBars, SwingRightBars))
+        {
+         outLowPrice = iLow(_Symbol, PERIOD_M15, shift);
+         outLowTime  = st;
+        }
+
+      if(outHighPrice != 0 && outLowPrice != 0) break;
+     }
+  }
+
+//+------------------------------------------------------------------+
+//| Refresh the two swing lines. Only moves a line when a genuinely   |
+//| newer swing is found AND it differs enough in price to matter     |
+//| (SwingMinDistancePoints) — prevents needless redraw churn.        |
+//+------------------------------------------------------------------+
+void RefreshM15Swings()
+  {
+   if(!EnableM15SwingHL) return;
+
+   double hp, lp; datetime ht, lt;
+   FindNearestM15Swings(hp, ht, lp, lt);
+
+   double pt = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+   double minDist = SwingMinDistancePoints * pt;
+
+   if(hp != 0 && ht != g_lastSwingHighTime &&
+      (g_lastSwingHighPrice == 0 || MathAbs(hp - g_lastSwingHighPrice) >= minDist))
+     {
+      UpdateOrCreateSwingLine(hp, ht, true);
+      g_lastSwingHighPrice = hp;
+      g_lastSwingHighTime  = ht;
+      GlobalVariableSet(g_gvHP, hp);
+      GlobalVariableSet(g_gvHT, (double)ht);
+     }
+
+   if(lp != 0 && lt != g_lastSwingLowTime &&
+      (g_lastSwingLowPrice == 0 || MathAbs(lp - g_lastSwingLowPrice) >= minDist))
+     {
+      UpdateOrCreateSwingLine(lp, lt, false);
+      g_lastSwingLowPrice = lp;
+      g_lastSwingLowTime  = lt;
+      GlobalVariableSet(g_gvLP, lp);
+      GlobalVariableSet(g_gvLT, (double)lt);
+     }
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  DASHBOARD
+//─────────────────────────────────────────────────────────────────────────────
+void DeleteDashboard()
+  {
+   for(int i=ObjectsTotal(0)-1; i>=0; i--)
+     {
+      string nm=ObjectName(0,i);
+      if(StringFind(nm,DASH_PREFIX)==0) ObjectDelete(0,nm);
+     }
+  }
+
+void DashLabel(string id, string txt, int x, int y, color clr, int fs=8)
+  {
+   string nm=DASH_PREFIX+id;
+   if(ObjectFind(0,nm)<0)
+     {
+      ObjectCreate(0,nm,OBJ_LABEL,0,0,0);
+      ObjectSetInteger(0,nm,OBJPROP_CORNER,     CORNER_RIGHT_UPPER);
+      ObjectSetInteger(0,nm,OBJPROP_ANCHOR,     ANCHOR_RIGHT_UPPER);
+      ObjectSetString (0,nm,OBJPROP_FONT,       "Consolas");
+      ObjectSetInteger(0,nm,OBJPROP_BACK,       false);
+      ObjectSetInteger(0,nm,OBJPROP_SELECTABLE, false);
+     }
+   ObjectSetString (0,nm,OBJPROP_TEXT,      txt);
+   ObjectSetInteger(0,nm,OBJPROP_XDISTANCE, x);
+   ObjectSetInteger(0,nm,OBJPROP_YDISTANCE, y);
+   ObjectSetInteger(0,nm,OBJPROP_COLOR,     clr);
+   ObjectSetInteger(0,nm,OBJPROP_FONTSIZE,  fs);
+  }
+
+string BiasStr(int b) { return b==1?"▲ BULL":b==-1?"▼ BEAR":"─ NEUT"; }
+color  BiasClr(int b) { return b==1?clrLime:b==-1?clrRed:clrGray; }
+string SigMark(bool enabled) { return enabled?"[ON] ":"[--] "; }
+
+void UpdateDashboard(int bM1, int bM5, int bM15, int bM30, double dailyChangePct)
+  {
+   if(!ShowDashboard) return;
+   int x=10, y0=20, dy=16, row=0;
+
+   DashLabel("m1",  StringFormat("%sM1  : %s", SigMark(SignalM1),  BiasStr(bM1)),
+             x,y0+row*dy, BiasClr(bM1));  row++;
+   DashLabel("m5",  StringFormat("%sM5  : %s", SigMark(SignalM5),  BiasStr(bM5)),
+             x,y0+row*dy, BiasClr(bM5));  row++;
+   DashLabel("m15", StringFormat("%sM15 : %s", SigMark(SignalM15), BiasStr(bM15)),
+             x,y0+row*dy, BiasClr(bM15)); row++;
+   DashLabel("m30", StringFormat("%sM30 : %s", SigMark(SignalM30), BiasStr(bM30)),
+             x,y0+row*dy, BiasClr(bM30)); row++;
+
+   string chgSign = (dailyChangePct>=0) ? "+" : "";
+   color  chgClr  = (dailyChangePct>0) ? clrLime : (dailyChangePct<0) ? clrRed : clrGray;
+   DashLabel("dchg", StringFormat("Daily Change : %s%.2f%%", chgSign, dailyChangePct),
+             x,y0+row*dy, chgClr); row++;
+
+   if(EnableM15SwingHL)
+     {
+      int swingCount = 0;
+      if(ObjectFind(0, SWING_HIGH_NAME) >= 0) swingCount++;
+      if(ObjectFind(0, SWING_LOW_NAME)  >= 0) swingCount++;
+      DashLabel("swings", StringFormat("M15 Swings : %d/2", swingCount),
+                x, y0+row*dy, clrGold); row++;
+     }
+
+   ChartRedraw(0);
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  FILTER FUNCTIONS
+//─────────────────────────────────────────────────────────────────────────────
+int GetStackScore(int direction)
+  {
+   double vals[13];
+   for(int i=0;i<13;i++)
+     {
+      double buf[]; ArraySetAsSeries(buf,true);
+      if(CopyBuffer(StackHandle(i),0,1,1,buf)<1) return 0;
+      vals[i]=buf[0];
+     }
+   int score=0;
+   for(int i=0;i<12;i++)
+     {
+      if(direction== 1 && vals[i]>vals[i+1]) score++;
+      if(direction==-1 && vals[i]<vals[i+1]) score++;
+     }
+   return score;
+  }
+
+double GetRibbonSpread(int fh, int sh)
+  {
+   double f[],s[]; ArraySetAsSeries(f,true); ArraySetAsSeries(s,true);
+   if(CopyBuffer(fh,0,1,1,f)<1) return 0;
+   if(CopyBuffer(sh,0,1,1,s)<1) return 0;
+   return MathAbs(f[0]-s[0]);
+  }
+
+double GetRibbonSlope(int midh)
+  {
+   double mid[]; ArraySetAsSeries(mid,true);
+   int need=SlopeLookback+2;
+   if(CopyBuffer(midh,0,1,need,mid)<need) return 0;
+   if(mid[SlopeLookback]==0) return 0;
+   return (mid[0]-mid[SlopeLookback])/mid[SlopeLookback];
+  }
+
+bool IsPullbackValid(int direction, double closeBar1, int midh)
+  {
+   double mid[]; ArraySetAsSeries(mid,true);
+   if(CopyBuffer(midh,0,1,1,mid)<1) return false;
+   if(mid[0]==0) return false;
+   double dist=(closeBar1-mid[0])/mid[0];
+   if(direction== 1) return dist<= MaxExtensionPct;
+   if(direction==-1) return dist>=-MaxExtensionPct;
+   return false;
+  }
+
+bool RunFilters(int direction, double closeBar1,
+                int fh, int sh, int midh,
+                int &outSc, double &outSp, double &outSl,
+                bool &spOK, bool &stOK, bool &slOK, bool &pbOK,
+                bool ignoreSpread=false, bool ignoreSlope=false)
+  {
+   outSc = GetStackScore(direction);
+   outSp = GetRibbonSpread(fh, sh);
+   outSl = GetRibbonSlope(midh);
+   spOK  = ignoreSpread || !UseSpreadFilter  || (outSp>=g_minSpread && outSp<=g_maxSpread);
+   stOK  = !UseStackFilter   || (outSc>=MinStackScore);
+   slOK  = ignoreSlope  || !UseSlopeFilter   || (MathAbs(outSl)>=MinSlopeThreshold);
+   pbOK  = !UsePullbackFilter|| IsPullbackValid(direction,closeBar1,midh);
+   return spOK && stOK && slOK && pbOK;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  CORE HELPERS
+//─────────────────────────────────────────────────────────────────────────────
+bool FillBuffer(int handle, double &buf[], int total, int prev)
+  {
+   int n=(prev==0)?total:total-prev+1;
+   return CopyBuffer(handle,0,0,n,buf)>=n;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  GetBias — FIX: reads 2 confirmed closed bars (shift 1..2), not just 1
+//─────────────────────────────────────────────────────────────────────────────
+int GetBias(int fh, int sh)
+  {
+   double f[],s[]; ArraySetAsSeries(f,true); ArraySetAsSeries(s,true);
+   if(CopyBuffer(fh,0,1,2,f)<2) return 0;
+   if(CopyBuffer(sh,0,1,2,s)<2) return 0;
+   double delta = f[0]-s[0];
+   if(delta>0) return  1;
+   if(delta<0) return -1;
+   return 0;
+  }
+
+int GetHistBias(ENUM_TIMEFRAMES tf, int fh, int sh, datetime t)
+  {
+   if(fh==0 || sh==0) return 0;
+   int shift = iBarShift(_Symbol, tf, t);
+   if(shift < 0) return 0;
+   double f[1], s[1];
+   if(CopyBuffer(fh, 0, shift+1, 1, f) > 0 && CopyBuffer(sh, 0, shift+1, 1, s) > 0)
+     {
+      if(f[0] > s[0]) return 1;
+      if(f[0] < s[0]) return -1;
+     }
+   return 0;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  GetPrevDayClose — returns the close of the previous COMPLETED D1 candle.
+//─────────────────────────────────────────────────────────────────────────────
+double GetPrevDayClose()
+  {
+   double prevClose[1];
+   if(CopyClose(_Symbol, PERIOD_D1, 1, 1, prevClose) < 1) return 0;
+   return prevClose[0];
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  GetDailyChangePercent
+//─────────────────────────────────────────────────────────────────────────────
+double GetDailyChangePercent(double currentPrice)
+  {
+   double prevClose = GetPrevDayClose();
+   if(prevClose<=0) return 0;
+   return ((currentPrice - prevClose) / prevClose) * 100.0;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  GetDailyBias
+//─────────────────────────────────────────────────────────────────────────────
+int GetDailyBias(double currentPrice)
+  {
+   double prevClose = GetPrevDayClose();
+   if(prevClose==0) return 0;
+   if(currentPrice > prevClose) return  1;
+   if(currentPrice < prevClose) return -1;
+   return 0;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  GetPrevDayCandleBias
+//─────────────────────────────────────────────────────────────────────────────
+int GetPrevDayCandleBias()
+  {
+   double o[1], c[1];
+   if(CopyOpen (_Symbol, PERIOD_D1, 1, 1, o) < 1) return 0;
+   if(CopyClose(_Symbol, PERIOD_D1, 1, 1, c) < 1) return 0;
+   if(c[0] > o[0]) return  1;
+   if(c[0] < o[0]) return -1;
+   return 0;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  DrawDailyCloseLine
+//─────────────────────────────────────────────────────────────────────────────
+void DrawDailyCloseLine(double price, datetime anchorTime, int candleBias)
+  {
+   if(!ShowDailyCloseLine || price<=0) return;
+
+   string lineName  = "EMA_DAILYCLOSE_LINE";
+   string labelName = "EMA_DAILYCLOSE_LABEL";
+
+   if(ObjectFind(0,lineName)<0)
+     {
+      ObjectCreate(0,lineName,OBJ_HLINE,0,0,price);
+      ObjectSetInteger(0,lineName,OBJPROP_COLOR,      DailyCloseLineColor);
+      ObjectSetInteger(0,lineName,OBJPROP_WIDTH,      1);
+      ObjectSetInteger(0,lineName,OBJPROP_STYLE,      STYLE_DASH);
+      ObjectSetInteger(0,lineName,OBJPROP_BACK,       true);
+      ObjectSetInteger(0,lineName,OBJPROP_SELECTABLE, false);
+     }
+   ObjectSetDouble(0,lineName,OBJPROP_PRICE,price);
+
+   if(ObjectFind(0,labelName)<0)
+     {
+      ObjectCreate(0,labelName,OBJ_TEXT,0,anchorTime,price);
+      ObjectSetInteger(0,labelName,OBJPROP_COLOR,      DailyCloseLineColor);
+      ObjectSetInteger(0,labelName,OBJPROP_FONTSIZE,   8);
+      ObjectSetString (0,labelName,OBJPROP_FONT,       "Consolas");
+      ObjectSetInteger(0,labelName,OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0,labelName,OBJPROP_ANCHOR,     ANCHOR_LEFT_LOWER);
+     }
+   string biasTxt = (candleBias==1) ? "bullish" : (candleBias==-1) ? "bearish" : "neutral";
+   ObjectSetString(0,labelName,OBJPROP_TEXT,StringFormat("Daily Close (%.2f) - %s",price,biasTxt));
+   ObjectMove(0,labelName,0,anchorTime,price);
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  DetectCrossover
+//─────────────────────────────────────────────────────────────────────────────
+int DetectCrossover(int fh, int sh)
+  {
+   double f[],s[]; ArraySetAsSeries(f,true); ArraySetAsSeries(s,true);
+   if(CopyBuffer(fh,0,1,3,f)<3) return 0;
+   if(CopyBuffer(sh,0,1,3,s)<3) return 0;
+   if((f[1]<s[1])&&(f[0]>s[0])) return  1;
+   if((f[1]>s[1])&&(f[0]<s[0])) return -1;
+   return 0;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  PROCESS ONE TF SIGNAL
+//─────────────────────────────────────────────────────────────────────────────
+bool ProcessTFSignal(string tfLabel,
+                     int fh, int sh, int midh,
+                     int confirm1_bias,
+                     int confirm2_bias,
+                     int confirm3_bias,
+                     int confirm4_bias,
+                     int &lastSig,
+                     int &lastSigBar,
+                     int  cooldownBars,
+                     datetime crossBar1Time,
+                     double closeBar1,
+                     bool ignoreSpread=false,
+                     bool ignoreSlope=false)
+  {
+   int cross = DetectCrossover(fh, sh);
+
+   if(DebugMode && cross!=0)
+      Print(StringFormat(">> %s XO detected: %s | confirm1=%d confirm2=%d confirm3=%d confirm4(daily)=%d",
+         tfLabel, cross==1?"BUY":"SELL",
+         confirm1_bias, confirm2_bias, confirm3_bias, confirm4_bias));
+
+   if(cross==0) return false;
+
+   if(cross==lastSig)
+     {
+      int barsElapsed = g_barCounter - lastSigBar;
+      if(barsElapsed < cooldownBars)
+        {
+         if(DebugMode)
+            Print(StringFormat(">> %s [%s] BLOCKED by cooldown: %d/%d bars elapsed",
+               tfLabel, cross==1?"BUY":"SELL", barsElapsed, cooldownBars));
+         return false;
+        }
+     }
+
+   if(confirm1_bias!=0 && confirm1_bias!=cross) return false;
+   if(confirm2_bias!=0 && confirm2_bias!=cross) return false;
+   if(confirm3_bias!=0 && confirm3_bias!=cross) return false;
+   if(confirm4_bias!=0 && confirm4_bias!=cross) return false;
+
+   int sc; double sp,sl; bool spOK,stOK,slOK,pbOK;
+   bool pass=RunFilters(cross,closeBar1,fh,sh,midh,sc,sp,sl,spOK,stOK,slOK,pbOK,
+                        ignoreSpread,ignoreSlope);
+
+   if(DebugMode || !pass)
+      Print(StringFormat(
+         ">> %s [%s] spread=%.5f(%s) stack=%d(%s) slope=%.7f(%s) pb=%s | PASS=%s",
+         tfLabel, cross==1?"BUY":"SELL",
+         sp,spOK?"OK":"FAIL", sc,stOK?"OK":"FAIL",
+         MathAbs(sl),slOK?"OK":"FAIL", pbOK?"OK":"FAIL",
+         pass?"YES":"NO"));
+
+   if(!pass) return false;
+
+   lastSig    = cross;
+   lastSigBar = g_barCounter;
+
+   DrawVLine(crossBar1Time, cross, tfLabel);
+
+   string dir  = (cross==1) ? "buy" : "sell";
+   string msg;
+   if(tfLabel=="M1")
+      msg = StringFormat("daily bias %s - %s", dir, _Symbol);
+   else
+      msg = StringFormat("%s %s | %s", tfLabel, dir, _Symbol);
+
+   Print("★ SIGNAL: " + msg);
+
+   if(EnableAlerts)
+     {
+      Alert(msg);
+      Print(">> Alert() fired");
+     }
+   if(EnablePush)
+     {
+      bool ok = SendNotification(msg);
+      Print(StringFormat(">> SendNotification() returned %s | Error=%d",
+         ok?"true":"false", GetLastError()));
+     }
+   if(EnableEmail)
+      SendMail(StringFormat("%s Signal %s | %s",tfLabel,dir,_Symbol),msg);
+
+   return true;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  HISTORICAL SCAN
+//─────────────────────────────────────────────────────────────────────────────
+void ScanOneTF(const datetime &time[], const double &close[], int bars,
+               int fh, int sh, int midh,
+               ENUM_TIMEFRAMES tf1, int cfh1, int csh1,
+               ENUM_TIMEFRAMES tf2, int cfh2, int csh2,
+               ENUM_TIMEFRAMES tf3, int cfh3, int csh3,
+               string tfLabel, int &histLast)
+  {
+   double tf_f[], tf_s[], tf_mid[];
+   ArraySetAsSeries(tf_f, true); ArraySetAsSeries(tf_s, true); ArraySetAsSeries(tf_mid, true);
+
+   if(CopyBuffer(fh,  0,0,bars,tf_f)  <bars) return;
+   if(CopyBuffer(sh,  0,0,bars,tf_s)  <bars) return;
+   if(CopyBuffer(midh,0,0,bars,tf_mid)<bars) return;
+
+   double sb0[],sb1[],sb2[],sb3[],sb4[],sb5[],sb6[];
+   double sb7[],sb8[],sb9[],sb10[],sb11[],sb12[];
+   bool stLoaded=true;
+   ArraySetAsSeries(sb0,true);  ArraySetAsSeries(sb1,true);  ArraySetAsSeries(sb2,true);
+   ArraySetAsSeries(sb3,true);  ArraySetAsSeries(sb4,true);  ArraySetAsSeries(sb5,true);
+   ArraySetAsSeries(sb6,true);  ArraySetAsSeries(sb7,true);  ArraySetAsSeries(sb8,true);
+   ArraySetAsSeries(sb9,true);  ArraySetAsSeries(sb10,true); ArraySetAsSeries(sb11,true);
+   ArraySetAsSeries(sb12,true);
+   if(CopyBuffer(hSt0, 0,0,bars,sb0) <bars) stLoaded=false;
+   if(CopyBuffer(hSt1, 0,0,bars,sb1) <bars) stLoaded=false;
+   if(CopyBuffer(hSt2, 0,0,bars,sb2) <bars) stLoaded=false;
+   if(CopyBuffer(hSt3, 0,0,bars,sb3) <bars) stLoaded=false;
+   if(CopyBuffer(hSt4, 0,0,bars,sb4) <bars) stLoaded=false;
+   if(CopyBuffer(hSt5, 0,0,bars,sb5) <bars) stLoaded=false;
+   if(CopyBuffer(hSt6, 0,0,bars,sb6) <bars) stLoaded=false;
+   if(CopyBuffer(hSt7, 0,0,bars,sb7) <bars) stLoaded=false;
+   if(CopyBuffer(hSt8, 0,0,bars,sb8) <bars) stLoaded=false;
+   if(CopyBuffer(hSt9, 0,0,bars,sb9) <bars) stLoaded=false;
+   if(CopyBuffer(hSt10,0,0,bars,sb10)<bars) stLoaded=false;
+   if(CopyBuffer(hSt11,0,0,bars,sb11)<bars) stLoaded=false;
+   if(CopyBuffer(hSt12,0,0,bars,sb12)<bars) stLoaded=false;
+
+   for(int i=bars-3; i>=1; i--)
+     {
+      bool bull=(tf_f[i+1]<tf_s[i+1])&&(tf_f[i]>tf_s[i]);
+      bool bear=(tf_f[i+1]>tf_s[i+1])&&(tf_f[i]<tf_s[i]);
+      if(!bull&&!bear) continue;
+      int cross=bull?1:-1;
+      if(cross==histLast) continue;
+
+      if(cfh1!=0) { int b1 = GetHistBias(tf1, cfh1, csh1, time[i]); if(b1!=cross) continue; }
+      if(cfh2!=0) { int b2 = GetHistBias(tf2, cfh2, csh2, time[i]); if(b2!=cross) continue; }
+      if(cfh3!=0) { int b3 = GetHistBias(tf3, cfh3, csh3, time[i]); if(b3!=cross) continue; }
+
+      if(UseStackFilter&&stLoaded)
+        {
+         double sv[13];
+         sv[0]=sb0[i];sv[1]=sb1[i];sv[2]=sb2[i];sv[3]=sb3[i];
+         sv[4]=sb4[i];sv[5]=sb5[i];sv[6]=sb6[i];sv[7]=sb7[i];
+         sv[8]=sb8[i];sv[9]=sb9[i];sv[10]=sb10[i];sv[11]=sb11[i];sv[12]=sb12[i];
+         int sc=0;
+         for(int k=0;k<12;k++)
+           { if(cross==1&&sv[k]>sv[k+1]) sc++; if(cross==-1&&sv[k]<sv[k+1]) sc++; }
+         if(sc<MinStackScore) continue;
+        }
+
+      if(UseSpreadFilter)
+        { double sp=MathAbs(tf_f[i]-tf_s[i]); if(sp<g_minSpread||sp>g_maxSpread) continue; }
+
+      if(UseSlopeFilter&&i+SlopeLookback<bars&&tf_mid[i+SlopeLookback]!=0)
+        { double sl=(tf_mid[i]-tf_mid[i+SlopeLookback])/tf_mid[i+SlopeLookback]; if(MathAbs(sl)<MinSlopeThreshold) continue; }
+
+      if(UsePullbackFilter&&tf_mid[i]!=0)
+        { double dist=(close[i]-tf_mid[i])/tf_mid[i]; if(cross==1&&dist>MaxExtensionPct) continue; if(cross==-1&&dist<-MaxExtensionPct) continue; }
+
+      histLast=cross;
+      DrawVLine(time[i],cross,tfLabel);
+     }
+  }
+
+void ScanHistoricalSignals(const datetime &time[], const double &close[], int total)
+  {
+   if(total<115) return;
+   int bars=MathMin(total,2000);
+   int histM1=0, histM5=0, histM15=0, histM30=0;
+
+   if(SignalM30)
+      ScanOneTF(time,close,bars,
+                hM30_fast,hM30_slow,hM30_mid,
+                PERIOD_CURRENT,0,0, PERIOD_CURRENT,0,0, PERIOD_CURRENT,0,0,
+                "M30",histM30);
+
+   if(SignalM15)
+      ScanOneTF(time,close,bars,
+                hM15_fast,hM15_slow,hM15_mid,
+                PERIOD_M30,hM30_fast,hM30_slow,
+                PERIOD_CURRENT,0,0, PERIOD_CURRENT,0,0,
+                "M15",histM15);
+
+   if(SignalM5)
+      ScanOneTF(time,close,bars,
+                hM5_fast,hM5_slow,hM5_mid,
+                PERIOD_M15,hM15_fast,hM15_slow,
+                PERIOD_M30,hM30_fast,hM30_slow,
+                PERIOD_CURRENT,0,0,
+                "M5",histM5);
+
+   if(SignalM1)
+      ScanOneTF(time,close,bars,
+                hM1_fast,hM1_slow,hM1_mid,
+                PERIOD_M5, hM5_fast, hM5_slow,
+                PERIOD_M15,hM15_fast,hM15_slow,
+                PERIOD_M30,hM30_fast,hM30_slow,
+                "M1",histM1);
+
+   g_lastSigM1=histM1; g_lastSigM5=histM5;
+   g_lastSigM15=histM15; g_lastSigM30=histM30;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  OnInit
+//─────────────────────────────────────────────────────────────────────────────
+int OnInit()
+  {
+   SetIndexBuffer(0, EMA50, INDICATOR_DATA);  SetIndexBuffer(1, EMA55, INDICATOR_DATA);
+   SetIndexBuffer(2, EMA60, INDICATOR_DATA);  SetIndexBuffer(3, EMA65, INDICATOR_DATA);
+   SetIndexBuffer(4, EMA70, INDICATOR_DATA);  SetIndexBuffer(5, EMA75, INDICATOR_DATA);
+   SetIndexBuffer(6, EMA80, INDICATOR_DATA);  SetIndexBuffer(7, EMA85, INDICATOR_DATA);
+   SetIndexBuffer(8, EMA90, INDICATOR_DATA);  SetIndexBuffer(9, EMA95, INDICATOR_DATA);
+   SetIndexBuffer(10,EMA100,INDICATOR_DATA);  SetIndexBuffer(11,EMA105,INDICATOR_DATA);
+   SetIndexBuffer(12,EMA110,INDICATOR_DATA);
+
+   SetPlot(0,"EMA 50",  clrRed);
+   SetPlot(1,"EMA 55",  clrDodgerBlue); SetPlot(2,"EMA 60",  clrDodgerBlue);
+   SetPlot(3,"EMA 65",  clrDodgerBlue); SetPlot(4,"EMA 70",  clrDodgerBlue);
+   SetPlot(5,"EMA 75",  clrDodgerBlue); SetPlot(6,"EMA 80",  clrDodgerBlue);
+   SetPlot(7,"EMA 85",  clrGold);       SetPlot(8,"EMA 90",  clrGold);
+   SetPlot(9,"EMA 95",  clrGold);       SetPlot(10,"EMA 100",clrGold);
+   SetPlot(11,"EMA 105",clrGold);       SetPlot(12,"EMA 110",clrRed);
+
+   h50 =iMA(_Symbol,PERIOD_CURRENT,50, 0,MODE_EMA,PRICE_CLOSE);
+   h55 =iMA(_Symbol,PERIOD_CURRENT,55, 0,MODE_EMA,PRICE_CLOSE);
+   h60 =iMA(_Symbol,PERIOD_CURRENT,60, 0,MODE_EMA,PRICE_CLOSE);
+   h65 =iMA(_Symbol,PERIOD_CURRENT,65, 0,MODE_EMA,PRICE_CLOSE);
+   h70 =iMA(_Symbol,PERIOD_CURRENT,70, 0,MODE_EMA,PRICE_CLOSE);
+   h75 =iMA(_Symbol,PERIOD_CURRENT,75, 0,MODE_EMA,PRICE_CLOSE);
+   h80 =iMA(_Symbol,PERIOD_CURRENT,80, 0,MODE_EMA,PRICE_CLOSE);
+   h85 =iMA(_Symbol,PERIOD_CURRENT,85, 0,MODE_EMA,PRICE_CLOSE);
+   h90 =iMA(_Symbol,PERIOD_CURRENT,90, 0,MODE_EMA,PRICE_CLOSE);
+   h95 =iMA(_Symbol,PERIOD_CURRENT,95, 0,MODE_EMA,PRICE_CLOSE);
+   h100=iMA(_Symbol,PERIOD_CURRENT,100,0,MODE_EMA,PRICE_CLOSE);
+   h105=iMA(_Symbol,PERIOD_CURRENT,105,0,MODE_EMA,PRICE_CLOSE);
+   h110=iMA(_Symbol,PERIOD_CURRENT,110,0,MODE_EMA,PRICE_CLOSE);
+
+   hM1_fast =iMA(_Symbol,PERIOD_M1, 50, 0,MODE_EMA,PRICE_CLOSE);
+   hM1_slow =iMA(_Symbol,PERIOD_M1, 110,0,MODE_EMA,PRICE_CLOSE);
+   hM1_mid  =iMA(_Symbol,PERIOD_M1, 75, 0,MODE_EMA,PRICE_CLOSE);
+   hM5_fast =iMA(_Symbol,PERIOD_M5, 50, 0,MODE_EMA,PRICE_CLOSE);
+   hM5_slow =iMA(_Symbol,PERIOD_M5, 110,0,MODE_EMA,PRICE_CLOSE);
+   hM5_mid  =iMA(_Symbol,PERIOD_M5, 75, 0,MODE_EMA,PRICE_CLOSE);
+   hM15_fast=iMA(_Symbol,PERIOD_M15,50, 0,MODE_EMA,PRICE_CLOSE);
+   hM15_slow=iMA(_Symbol,PERIOD_M15,110,0,MODE_EMA,PRICE_CLOSE);
+   hM15_mid =iMA(_Symbol,PERIOD_M15,75, 0,MODE_EMA,PRICE_CLOSE);
+   hM30_fast=iMA(_Symbol,PERIOD_M30,50, 0,MODE_EMA,PRICE_CLOSE);
+   hM30_slow=iMA(_Symbol,PERIOD_M30,110,0,MODE_EMA,PRICE_CLOSE);
+   hM30_mid =iMA(_Symbol,PERIOD_M30,75, 0,MODE_EMA,PRICE_CLOSE);
+
+   hSt0 =iMA(_Symbol,PERIOD_M1,50, 0,MODE_EMA,PRICE_CLOSE);
+   hSt1 =iMA(_Symbol,PERIOD_M1,55, 0,MODE_EMA,PRICE_CLOSE);
+   hSt2 =iMA(_Symbol,PERIOD_M1,60, 0,MODE_EMA,PRICE_CLOSE);
+   hSt3 =iMA(_Symbol,PERIOD_M1,65, 0,MODE_EMA,PRICE_CLOSE);
+   hSt4 =iMA(_Symbol,PERIOD_M1,70, 0,MODE_EMA,PRICE_CLOSE);
+   hSt5 =iMA(_Symbol,PERIOD_M1,75, 0,MODE_EMA,PRICE_CLOSE);
+   hSt6 =iMA(_Symbol,PERIOD_M1,80, 0,MODE_EMA,PRICE_CLOSE);
+   hSt7 =iMA(_Symbol,PERIOD_M1,85, 0,MODE_EMA,PRICE_CLOSE);
+   hSt8 =iMA(_Symbol,PERIOD_M1,90, 0,MODE_EMA,PRICE_CLOSE);
+   hSt9 =iMA(_Symbol,PERIOD_M1,95, 0,MODE_EMA,PRICE_CLOSE);
+   hSt10=iMA(_Symbol,PERIOD_M1,100,0,MODE_EMA,PRICE_CLOSE);
+   hSt11=iMA(_Symbol,PERIOD_M1,105,0,MODE_EMA,PRICE_CLOSE);
+   hSt12=iMA(_Symbol,PERIOD_M1,110,0,MODE_EMA,PRICE_CLOSE);
+
+   double pt=SymbolInfoDouble(_Symbol,SYMBOL_POINT);
+   g_minSpread=(MinSpreadPoints>0)?MinSpreadPoints:pt*5.0;
+   g_maxSpread=(MaxSpreadPoints>0)?MaxSpreadPoints:pt*5000.0;
+
+   // Build per-symbol Global Variable names for swing state persistence
+   g_gvHP = "MOLDEMPIRE_"+_Symbol+"_M15_SWHIGH_PRICE";
+   g_gvHT = "MOLDEMPIRE_"+_Symbol+"_M15_SWHIGH_TIME";
+   g_gvLP = "MOLDEMPIRE_"+_Symbol+"_M15_SWLOW_PRICE";
+   g_gvLT = "MOLDEMPIRE_"+_Symbol+"_M15_SWLOW_TIME";
+
+   // Re-anchor existing swing lines from persisted state — no rescan, no redraw
+   if(EnableM15SwingHL)
+      LoadSwingStateFromGlobals();
+
+   Print(StringFormat(
+      "MOLD_EMPIRE_V5_FIXED | %s | pt=%.5f | spread=[%.5f,%.5f] | stack>=%d | cooldownM1=%d bars | M15 SwingHL(nearest)=%s",
+      _Symbol, pt, g_minSpread, g_maxSpread, MinStackScore, CooldownBarsM1,
+      EnableM15SwingHL?"ON":"OFF"));
+
+   if(EnablePush)
+      Print("Push notifications ENABLED — ensure MetaQuotes ID is set in Tools -> Options -> Notifications, otherwise SendNotification() will silently fail.");
+
+   IndicatorSetString(INDICATOR_SHORTNAME,"MOLD_EMPIRE_V5_FIXED");
+   return INIT_SUCCEEDED;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  OnCalculate
+//─────────────────────────────────────────────────────────────────────────────
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread_arr[])
+  {
+   if(rates_total<115) return 0;
+
+   ArraySetAsSeries(EMA50,true);  ArraySetAsSeries(EMA55,true);
+   ArraySetAsSeries(EMA60,true);  ArraySetAsSeries(EMA65,true);
+   ArraySetAsSeries(EMA70,true);  ArraySetAsSeries(EMA75,true);
+   ArraySetAsSeries(EMA80,true);  ArraySetAsSeries(EMA85,true);
+   ArraySetAsSeries(EMA90,true);  ArraySetAsSeries(EMA95,true);
+   ArraySetAsSeries(EMA100,true); ArraySetAsSeries(EMA105,true);
+   ArraySetAsSeries(EMA110,true);
+   ArraySetAsSeries(time,true);   ArraySetAsSeries(close,true);
+
+   if(!FillBuffer(h50, EMA50, rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h55, EMA55, rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h60, EMA60, rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h65, EMA65, rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h70, EMA70, rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h75, EMA75, rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h80, EMA80, rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h85, EMA85, rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h90, EMA90, rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h95, EMA95, rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h100,EMA100,rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h105,EMA105,rates_total,prev_calculated)) return prev_calculated;
+   if(!FillBuffer(h110,EMA110,rates_total,prev_calculated)) return prev_calculated;
+
+   bool mtfReady=MTFDataReady();
+
+   if(!g_histDone && mtfReady && DrawHistorical)
+     {
+      DeleteAllVLines(); g_lineCounter=0;
+      ScanHistoricalSignals(time,close,rates_total);
+      g_histDone=true;
+     }
+
+   int bM1 =GetBias(hM1_fast, hM1_slow);
+   int bM5 =GetBias(hM5_fast, hM5_slow);
+   int bM15=GetBias(hM15_fast,hM15_slow);
+   int bM30=GetBias(hM30_fast,hM30_slow);
+
+   double tickPrice     = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double dailyChangePct= GetDailyChangePercent(tickPrice);
+
+   UpdateDashboard(bM1,bM5,bM15,bM30,dailyChangePct);
+
+   if(ShowDailyCloseLine)
+     {
+      double prevDayClose = GetPrevDayClose();
+      if(prevDayClose>0)
+        {
+         int prevDayCandleBias = GetPrevDayCandleBias();
+         DrawDailyCloseLine(prevDayClose, time[0], prevDayCandleBias);
+        }
+     }
+
+   // ── M15 nearest Swing High/Low — updates the SAME 2 lines in place ──
+   RefreshM15Swings();
+
+   // ── Only process EMA crossover signals on a new bar ───────────
+   datetime curBar=time[0];
+   if(curBar==g_lastBarTime) return rates_total;
+   g_lastBarTime=curBar;
+   g_barCounter++;
+
+   if(!mtfReady)
+     {
+      if(DebugMode) Print("MTF not ready yet — skipping signal check this bar");
+      return rates_total;
+     }
+
+   double c1 = (rates_total>1) ? close[1] : close[0];
+   datetime t1= (rates_total>1) ? time[1]  : time[0];
+
+   int dailyBias = GetDailyBias(tickPrice);
+
+   if(DebugMode)
+      Print(StringFormat("BAR %d | bM1=%d bM5=%d bM15=%d bM30=%d | dailyBias=%d dailyChg=%.2f%%",
+         g_barCounter, bM1, bM5, bM15, bM30, dailyBias, dailyChangePct));
+
+   if(SignalM30)
+      ProcessTFSignal("M30", hM30_fast,hM30_slow,hM30_mid,
+                      0, 0, 0, 0,
+                      g_lastSigM30, g_lastSigBarM30, CooldownBarsM30,
+                      t1, c1);
+
+   if(SignalM15)
+      ProcessTFSignal("M15", hM15_fast,hM15_slow,hM15_mid,
+                      bM30, 0, 0, 0,
+                      g_lastSigM15, g_lastSigBarM15, CooldownBarsM15,
+                      t1, c1);
+
+   if(SignalM5)
+      ProcessTFSignal("M5",  hM5_fast,hM5_slow,hM5_mid,
+                      bM15, bM30, 0, 0,
+                      g_lastSigM5, g_lastSigBarM5, CooldownBarsM5,
+                      t1, c1);
+
+   if(SignalM1)
+      ProcessTFSignal("M1",  hM1_fast,hM1_slow,hM1_mid,
+                      bM5, bM15, bM30, dailyBias,
+                      g_lastSigM1, g_lastSigBarM1, CooldownBarsM1,
+                      t1, c1,
+                      M1IgnoreSpread, M1IgnoreSlope);
+
+   return rates_total;
+  }
+
+//─────────────────────────────────────────────────────────────────────────────
+//  OnDeinit
+//  Swing lines / Global Variables are only wiped when the indicator is
+//  actually removed (REASON_REMOVE). Timeframe changes, recompiles,
+//  parameter edits, and account/chart-close events all leave the swing
+//  state and the drawn lines exactly where they are — LoadSwingStateFromGlobals()
+//  in OnInit re-anchors them without a rescan or a visible redraw.
+//─────────────────────────────────────────────────────────────────────────────
+void OnDeinit(const int reason)
+  {
+   DeleteAllVLines();
+   DeleteDashboard();
+
+   if(reason==REASON_REMOVE)
+     {
+      DeleteAllSwingLines();
+      if(GlobalVariableCheck(g_gvHP)) GlobalVariableDel(g_gvHP);
+      if(GlobalVariableCheck(g_gvHT)) GlobalVariableDel(g_gvHT);
+      if(GlobalVariableCheck(g_gvLP)) GlobalVariableDel(g_gvLP);
+      if(GlobalVariableCheck(g_gvLT)) GlobalVariableDel(g_gvLT);
+     }
+
+   if(ObjectFind(0,"EMA_DAILYCLOSE_LINE")>=0)  ObjectDelete(0,"EMA_DAILYCLOSE_LINE");
+   if(ObjectFind(0,"EMA_DAILYCLOSE_LABEL")>=0) ObjectDelete(0,"EMA_DAILYCLOSE_LABEL");
+   int h[]={h50,h55,h60,h65,h70,h75,h80,h85,h90,h95,h100,h105,h110,
+            hM1_fast,hM1_slow,hM1_mid,
+            hM5_fast,hM5_slow,hM5_mid,
+            hM15_fast,hM15_slow,hM15_mid,
+            hM30_fast,hM30_slow,hM30_mid,
+            hSt0,hSt1,hSt2,hSt3,hSt4,hSt5,hSt6,
+            hSt7,hSt8,hSt9,hSt10,hSt11,hSt12};
+   for(int i=0;i<ArraySize(h);i++) IndicatorRelease(h[i]);
+  }
+//+------------------------------------------------------------------+

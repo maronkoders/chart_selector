@@ -391,24 +391,33 @@ with filter_col:
         if not asset_data:
             st.warning("Run the initial scan first so there is an asset list to filter.")
         else:
-            with st.spinner("Filtering assets by directional bias..."):
-                # Bias filter only — margin is already handled by the Safe Size scan.
-                result = filter_assets_from_exports(asset_data, allow_live_mt5=True)
+            with st.spinner("Re-reading MQL5 Files bias snapshots..."):
+                # Always re-read JSON from the connected terminal's Files folder.
+                # Margin is already handled by the Safe Size scan.
+                result = filter_assets_from_exports(
+                    asset_data,
+                    allow_live_mt5=True,
+                )
 
-            hidden_assets = init_hidden_assets(profile_name)
-            next_hidden_assets = set(hidden_assets)
-            eligible = result.get("eligible_assets", [])
+            eligible = set(result.get("eligible_assets", []))
             rejected = result.get("rejected_assets", [])
-
-            for asset in eligible:
-                next_hidden_assets.discard(asset)
-
-            for asset in rejected:
-                next_hidden_assets.add(asset)
+            # Full rebuild (same as initial scan): eligible = watchlist,
+            # everything else in the scan = hidden. Avoids stale manual hides
+            # blocking assets that are aligned again (e.g. Jump 10).
+            next_hidden_assets = set()
+            for row in asset_data:
+                name = row.get("Asset")
+                if name and name not in eligible:
+                    next_hidden_assets.add(name)
 
             st.session_state.hidden_assets = next_hidden_assets
             st.session_state.hidden_assets_profile = profile_name
             save_hidden_assets(next_hidden_assets, profile_name)
+            # Drop cached velocity for newly visible rows so values refresh.
+            velocity_cache = st.session_state.get("velocity_cache")
+            if isinstance(velocity_cache, dict):
+                for asset in eligible:
+                    velocity_cache.pop(asset, None)
 
             directions = {
                 asset: direction
@@ -419,10 +428,11 @@ with filter_col:
             buy_count = sum(1 for d in directions.values() if d == "BUY")
             sell_count = sum(1 for d in directions.values() if d == "SELL")
             source = result.get("bias_source", "none")
+            folder_label = result.get("export_folder") or "live MT5 only"
             st.success(
                 f"One-directional bias ({source}): {len(eligible)} kept "
                 f"({buy_count} BUY · {sell_count} SELL) · "
-                f"{len(rejected)} hidden"
+                f"{len(rejected)} hidden · from {folder_label}"
             )
             st.rerun()
 

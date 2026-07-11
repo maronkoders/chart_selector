@@ -1,6 +1,6 @@
 """Builds a monthly trading calendar (like a GitHub-style P&L heatmap) as HTML.
 
-Each day cell shows net P/L and trade count for that day, colored:
+Each day cell shows net P/L and position count for that day, colored:
 - green  = net profit
 - red    = net loss
 - gray   = traded but net exactly $0.00
@@ -99,13 +99,13 @@ def build_calendar_html(
 
             sign = "-" if pnl < 0 else ""
             amount = f"{sign}${abs(pnl):,.2f}"
-            trades_label = "trade" if count == 1 else "trades"
+            positions_label = "position" if count == 1 else "positions"
 
             row_cells.append(
                 f'<div class="cs-cal-cell {css_class}">'
                 f'<div class="cs-cal-daynum">{day.day}</div>'
                 f'<div class="cs-cal-amount">{html.escape(amount)}</div>'
-                f'<div class="cs-cal-trades">{count} {trades_label}</div>'
+                f'<div class="cs-cal-trades">{count} {positions_label}</div>'
                 f'</div>'
             )
 

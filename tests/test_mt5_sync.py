@@ -1,4 +1,6 @@
 import json
+import os
+import time
 
 from core import mt5_sync
 
@@ -183,3 +185,43 @@ def test_filter_assets_from_exports_discovers_folder(tmp_path, monkeypatch):
 
     assert result["eligible_assets"] == ["Crash 500 Index"]
     assert result["export_folder"] == str(export_folder)
+
+
+def test_stale_export_falls_through_to_live(tmp_path, monkeypatch):
+    export_folder = tmp_path / "Files"
+    export_folder.mkdir()
+    _write_export(
+        export_folder,
+        "Jump 100 Index",
+        price=240.0,
+        daily_close=262.0,
+        daily_change=-8.0,
+        bias={"M1": "SELL", "M5": "SELL", "M15": "SELL", "M30": "SELL"},
+    )
+    path = export_folder / "asset_snapshot_Jump_100_Index.json"
+    # Make the exporter file older than EXPORT_MAX_AGE_SECONDS.
+    stale_mtime = time.time() - (mt5_sync.EXPORT_MAX_AGE_SECONDS + 60)
+    os.utime(path, (stale_mtime, stale_mtime))
+
+    live_snapshot = {
+        "Asset": "Jump 100 Index",
+        "Current Price": 245.0,
+        "Daily Close": 262.0,
+        "Daily Change": -6.5,
+        "Bias": {"M1": "BUY", "M5": "SELL", "M15": "SELL", "M30": "SELL"},
+    }
+    monkeypatch.setattr(
+        mt5_sync,
+        "compute_live_bias_snapshot",
+        lambda symbol: live_snapshot if symbol == "Jump 100 Index" else None,
+    )
+
+    result = mt5_sync.filter_assets_from_exports(
+        [{"Asset": "Jump 100 Index", "Min-Margin ($)": 0.1}],
+        export_folder=export_folder,
+        allow_live_mt5=True,
+    )
+
+    assert "Jump 100 Index" in result["rejected_assets"]
+    assert result["reasons"]["Jump 100 Index"] == "mixed timeframe biases"
+    assert result["bias_source"] == "live"
