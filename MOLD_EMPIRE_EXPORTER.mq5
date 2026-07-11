@@ -15,6 +15,39 @@ int    hM5_fast,  hM5_slow;
 int    hM15_fast, hM15_slow;
 int    hM30_fast, hM30_slow;
 
+string SyncLabelName()
+  {
+   return "MOLD_EXPORT_SYNC_LABEL_" + IntegerToString(ChartID());
+  }
+
+void UpdateSyncLabel()
+  {
+   string name = SyncLabelName();
+   if(ObjectFind(0, name) < 0)
+     {
+      ObjectCreate(0, name, OBJ_LABEL, 0, 0, 0);
+      ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER);
+      ObjectSetInteger(0, name, OBJPROP_ANCHOR, ANCHOR_UPPER);
+      ObjectSetInteger(0, name, OBJPROP_COLOR, clrDodgerBlue);
+      ObjectSetInteger(0, name, OBJPROP_FONTSIZE, 14);
+      ObjectSetString(0, name, OBJPROP_FONT, "Arial Bold");
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+      ObjectSetInteger(0, name, OBJPROP_BACK, false);
+     }
+
+   int width = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
+   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, width / 2);
+   ObjectSetInteger(0, name, OBJPROP_YDISTANCE, 0);
+   ObjectSetString(0, name, OBJPROP_TEXT, "Syncing data exportation...");
+   ChartRedraw(0);
+  }
+
+void RemoveSyncLabel()
+  {
+   ObjectDelete(0, SyncLabelName());
+  }
+
 string SafeSymbol(string symbol)
   {
    string s=symbol;
@@ -42,11 +75,13 @@ int OnInit()
    hM30_fast = iMA(_Symbol, PERIOD_M30,50, 0, MODE_EMA, PRICE_CLOSE);
    hM30_slow = iMA(_Symbol, PERIOD_M30,110,0, MODE_EMA, PRICE_CLOSE);
 
+   UpdateSyncLabel();
    return(INIT_SUCCEEDED);
   }
 
 void OnDeinit(const int reason)
   {
+   RemoveSyncLabel();
    IndicatorRelease(hM1_fast);
    IndicatorRelease(hM1_slow);
    IndicatorRelease(hM5_fast);
@@ -55,6 +90,15 @@ void OnDeinit(const int reason)
    IndicatorRelease(hM15_slow);
    IndicatorRelease(hM30_fast);
    IndicatorRelease(hM30_slow);
+  }
+
+void OnChartEvent(const int id,
+                  const long &lparam,
+                  const double &dparam,
+                  const string &sparam)
+  {
+   if(id == CHARTEVENT_CHART_CHANGE)
+      UpdateSyncLabel();
   }
 
 int GetBias(int fastHandle, int slowHandle)
@@ -126,6 +170,8 @@ int OnCalculate(const int rates_total,
   {
    if(rates_total < 3)
       return prev_calculated;
+
+   UpdateSyncLabel();
 
    double currentPrice = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double dailyClose = GetPrevDayClose();
