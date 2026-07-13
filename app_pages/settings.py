@@ -23,6 +23,13 @@ from core.broker_universe import (
     get_enabled_index_classes,
     advisor_title,
 )
+from core.volatile_store import (
+    OPERATORS,
+    delete_option,
+    format_option_scale,
+    load_options,
+    upsert_option,
+)
 
 st.title("⚙️ Settings")
 
@@ -92,8 +99,8 @@ if "screenshot_folder_selected" not in st.session_state:
     st.session_state.screenshot_folder_selected = None
 
 # Secondary navigation tabs
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["Broker Profiles", "Index Classes", "Risk Parameters", "Screenshot Folder"]
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    ["Broker Profiles", "Index Classes", "Risk Parameters", "Screenshot Folder", "Volatile"]
 )
 
 # Tab 1: Broker Profiles
@@ -292,7 +299,6 @@ with tab2:
                     set_enabled_index_classes(cfg, profile_name, catalog)
                     st.session_state.pop(widget_key, None)
                     st.session_state.pop("asset_data", None)
-                    st.session_state.pop("velocity_cache", None)
                     st.success("All classes enabled.")
                     st.rerun()
             with c_none:
@@ -300,7 +306,6 @@ with tab2:
                     set_enabled_index_classes(cfg, profile_name, [])
                     st.session_state.pop(widget_key, None)
                     st.session_state.pop("asset_data", None)
-                    st.session_state.pop("velocity_cache", None)
                     st.success("All classes disabled.")
                     st.rerun()
 
@@ -308,7 +313,6 @@ with tab2:
                 set_enabled_index_classes(cfg, profile_name, selected)
                 st.session_state.pop(widget_key, None)
                 st.session_state.pop("asset_data", None)
-                st.session_state.pop("velocity_cache", None)
                 st.success(
                     f"Saved {len(selected)} class(es) for `{profile_name}`."
                 )
@@ -430,3 +434,109 @@ with tab4:
                 st.rerun()
             else:
                 st.error("The specified path does not exist. Please create the folder first or use the Open Folder button.")
+
+# Tab 5: Volatile options / scales ─────────────────────────────────────────────
+with tab5:
+    st.subheader("Volatile Options")
+    st.caption(
+        "Define the labels available for the `\\volatile` column on Indices Advisor, "
+        "and the numeric scale each label maps to (e.g. not < 2.5, tiny ≤ 5)."
+    )
+
+    options = load_options()
+
+    if options:
+        st.write("**Current options:**")
+        for opt in options:
+            label = opt["label"]
+            with st.container(border=True):
+                c1, c2, c3, c4 = st.columns([2.2, 1.2, 1.4, 1])
+                with c1:
+                    st.markdown(f"**{label}**")
+                    st.caption(f"Scale: `{format_option_scale(opt)}`")
+                with c2:
+                    st.code(opt["operator"], language=None)
+                with c3:
+                    st.code(f"{opt['scale']:g}", language=None)
+                with c4:
+                    if st.button("🗑️", key=f"del_vol_{label}", use_container_width=True, help=f"Delete '{label}'"):
+                        ok, msg = delete_option(label)
+                        if ok:
+                            st.success(msg)
+                        else:
+                            st.error(msg)
+                        st.rerun()
+    else:
+        st.info("No volatile options yet. Add one below.")
+
+    st.divider()
+
+    editing = st.session_state.get("edit_volatile_option")
+    st.subheader("Add / Edit Option")
+    if editing:
+        st.caption(f"Editing **{editing}** — change the label to rename.")
+        existing = next((o for o in options if o["label"] == editing), None)
+    else:
+        existing = None
+
+    with st.form("volatile_option_form", clear_on_submit=not bool(editing)):
+        label_in = st.text_input(
+            "Label",
+            value=(existing or {}).get("label", ""),
+            placeholder="e.g. not, tiny, in-between, very",
+        )
+        op_col, scale_col = st.columns(2)
+        with op_col:
+            current_op = (existing or {}).get("operator", "<=")
+            op_index = OPERATORS.index(current_op) if current_op in OPERATORS else 1
+            operator_in = st.selectbox("Operator", options=list(OPERATORS), index=op_index)
+        with scale_col:
+            scale_in = st.number_input(
+                "Scale",
+                value=float((existing or {}).get("scale", 0.0)),
+                step=0.5,
+                format="%.2f",
+            )
+        submitted = st.form_submit_button(
+            "Update Option" if editing else "Add Option",
+            use_container_width=True,
+        )
+        if submitted:
+            ok, msg = upsert_option(
+                label_in,
+                operator_in,
+                scale_in,
+                replace_label=editing,
+            )
+            if ok:
+                st.session_state.pop("edit_volatile_option", None)
+                st.success(msg)
+                st.rerun()
+            else:
+                st.error(msg)
+
+    if editing:
+        if st.button("Cancel Edit", use_container_width=True):
+            st.session_state.pop("edit_volatile_option", None)
+            st.rerun()
+    elif options:
+        st.write("**Edit an existing option:**")
+        edit_choice = st.selectbox(
+            "Pick option to edit",
+            options=[o["label"] for o in options],
+            key="volatile_edit_pick",
+            label_visibility="collapsed",
+        )
+        if st.button("✏️ Edit selected", use_container_width=True):
+            st.session_state.edit_volatile_option = edit_choice
+            st.rerun()
+
+    st.divider()
+    st.markdown("**Scale cheat sheet** (from your options)")
+    if options:
+        lines = " · ".join(
+            f"**{o['label']}** `{format_option_scale(o)}`" for o in options
+        )
+        st.markdown(lines)
+    else:
+        st.caption("Add options to see the summary.")

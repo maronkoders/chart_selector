@@ -424,8 +424,6 @@ def sync_assets(asset_data: list[dict], snapshot_file: Path | None = None) -> di
             "Min Lot": asset.get("Min Lot"),
             "Min-Margin ($)": asset.get("Min-Margin ($)"),
             "Volume Limit": asset.get("Volume Limit"),
-            "Velocity (pips/min)": asset.get("Velocity (pips/min)"),
-            "Pip Value ($/min)": asset.get("Pip Value ($/min)"),
             "Current Price": tick.bid,
             "Daily Close": indicator.get("daily_close"),
             "Daily Change": indicator.get("daily_change"),

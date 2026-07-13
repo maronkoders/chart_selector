@@ -57,7 +57,6 @@ def ensure_connection(cfg: dict, force: bool = False) -> tuple[bool, str]:
             # Drop broker-specific scan state so Indices Advisor rescans the new account.
             for key in (
                 "asset_data",
-                "velocity_cache",
                 "asset_directions",
                 "hidden_assets",
                 "hidden_assets_profile",

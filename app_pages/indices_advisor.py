@@ -24,11 +24,12 @@ from core.hidden_assets_store import (
     save_hidden_assets,
 )
 from core.volatile_store import (
-    VOLATILE_OPTIONS,
     apply_volatile_edits,
+    format_option_scale,
+    load_options,
     load_volatile,
+    option_labels,
 )
-from core.velocity import compute_price_velocity
 
 BIAS_ARROW = {
     "BUY": "↑",
@@ -63,50 +64,6 @@ def _ensure_symbol_selected(name: str):
         info = mt5.symbol_info(name)
     return info
 
-
-def _fill_velocity_for_assets(asset_names: list[str]) -> dict[str, dict]:
-    """Compute M1 velocity only for the given assets, reusing session cache."""
-    cache: dict = st.session_state.setdefault("velocity_cache", {})
-    results: dict[str, dict] = {}
-
-    missing = [name for name in asset_names if name not in cache]
-    if missing:
-        progress = st.progress(0, text="Computing velocity...")
-        for i, name in enumerate(missing):
-            progress.progress(
-                (i + 1) / len(missing),
-                text=f"Velocity {i + 1}/{len(missing)}: {name}",
-            )
-            _ensure_symbol_selected(name)
-            velocity_result = compute_price_velocity(name, "M1")
-            velocity_m1 = (
-                round(velocity_result["velocity"], 4)
-                if velocity_result and velocity_result["velocity"] is not None
-                else None
-            )
-            cache[name] = {"velocity": velocity_m1}
-        progress.empty()
-
-    for name in asset_names:
-        results[name] = cache.get(name, {"velocity": None})
-    return results
-
-
-def _apply_velocity_to_asset_data(asset_data: list[dict], velocity_by_asset: dict[str, dict]) -> None:
-    """Update in-place asset rows and session state with cached velocity values."""
-    for row in asset_data:
-        name = row.get("Asset")
-        if name not in velocity_by_asset:
-            continue
-        velocity_m1 = velocity_by_asset[name].get("velocity")
-        min_lot = row.get("Min Lot")
-        row["Velocity (pips/min)"] = velocity_m1
-        row["Pip Value ($/min)"] = (
-            round(velocity_m1 * min_lot, 4)
-            if velocity_m1 is not None and min_lot is not None
-            else None
-        )
-    st.session_state.asset_data = asset_data
 
 INDEX_CLASS_KEYWORDS = [
     ("Volatility", "volatility"),
@@ -230,7 +187,6 @@ if mw_result.get("removed"):
 
 # 3. FETCH SYNTHETIC INDICES SPEC SHEETS
 if "asset_data" not in st.session_state:
-    st.session_state.pop("velocity_cache", None)
     with st.status("Scanning synthetic indices...", expanded=True) as status:
         status.write(
             f"Market Watch set to {len(mw_result.get('desired') or [])} allowed "
@@ -285,8 +241,6 @@ if "asset_data" not in st.session_state:
                 else:
                     min_trade_risk_cost = 0.0
 
-                # M1 velocity is deferred until after Safe Size + bias hiding so
-                # we only pull heavy history for assets that remain visible.
                 asset_data.append({
                     "Asset": name,
                     "Min Lot": min_lot,
@@ -294,14 +248,11 @@ if "asset_data" not in st.session_state:
                     "Volume Limit": vol_limit,
                     "Min Risk Exposure ($)": round(min_trade_risk_cost, 2),
                     "Suitable": "🟢 Safe Size" if is_suitable else "🔴 Volatility Too High",
-                    "Velocity (pips/min)": None,
-                    "Pip Value ($/min)": None,
                 })
 
             progress_bar.empty()
 
-            # Apply directional-bias hiding (exporter JSON and/or live MT5 EMA bias)
-            # so the heavy M1 velocity step only runs on the aligned watchlist.
+            # Apply directional-bias hiding (exporter JSON and/or live MT5 EMA bias).
             if features.get("bias_filter", True):
                 status.write("Applying directional bias filter...")
                 bias_result = filter_assets_from_exports(asset_data, allow_live_mt5=True)
@@ -340,19 +291,10 @@ else:
 # Convert to DataFrame for layout structuring
 df_assets = pd.DataFrame(asset_data)
 
-# Filter to show ONLY safe assets, then sort intelligently: assets with both
-# low margin AND low pip value (cheap, calm) rise to the top; assets with both
-# high margin AND high pip value (expensive, fast-moving) sink to the bottom.
-# Ranks are used instead of raw values so margin (small $ range) and pip value
-# (can span 0.001 to 100+) contribute equally regardless of scale.
+# Filter to show ONLY safe assets, lowest margin first.
 if not df_assets.empty:
     df_assets = df_assets[df_assets["Suitable"] == "🟢 Safe Size"]
-
-    margin_rank = df_assets["Min-Margin ($)"].rank(method="min", ascending=True)
-    pip_value_rank = df_assets["Pip Value ($/min)"].rank(method="min", ascending=True, na_option="bottom")
-    df_assets["Risk Score"] = margin_rank + pip_value_rank
-
-    df_assets = df_assets.sort_values(by="Risk Score", ascending=True)
+    df_assets = df_assets.sort_values(by="Min-Margin ($)", ascending=True)
 
 hidden_assets = init_hidden_assets(profile_name)
 
@@ -418,11 +360,6 @@ with filter_col:
             st.session_state.hidden_assets = next_hidden_assets
             st.session_state.hidden_assets_profile = profile_name
             save_hidden_assets(next_hidden_assets, profile_name)
-            # Drop cached velocity for newly visible rows so values refresh.
-            velocity_cache = st.session_state.get("velocity_cache")
-            if isinstance(velocity_cache, dict):
-                for asset in eligible:
-                    velocity_cache.pop(asset, None)
 
             directions = {
                 asset: direction
@@ -448,24 +385,6 @@ if not df_assets.empty:
 
     df_scanner = df_assets[~df_assets["Asset"].isin(hidden_assets)].copy()
 
-    # Heavy M1 velocity only for assets still visible after Safe Size + bias hide.
-    visible_names = df_scanner["Asset"].tolist()
-    if visible_names:
-        velocity_by_asset = _fill_velocity_for_assets(visible_names)
-        _apply_velocity_to_asset_data(asset_data, velocity_by_asset)
-        df_assets = pd.DataFrame(
-            [row for row in asset_data if row.get("Suitable") == "🟢 Safe Size"]
-        )
-        if not df_assets.empty:
-            df_assets["Index Class"] = df_assets["Asset"].apply(lambda a: get_index_class(a, universe))
-            margin_rank = df_assets["Min-Margin ($)"].rank(method="min", ascending=True)
-            pip_value_rank = df_assets["Pip Value ($/min)"].rank(
-                method="min", ascending=True, na_option="bottom"
-            )
-            df_assets["Risk Score"] = margin_rank + pip_value_rank
-            df_assets = df_assets.sort_values(by="Risk Score", ascending=True)
-        df_scanner = df_assets[~df_assets["Asset"].isin(hidden_assets)].copy()
-
     # Prefer live export directions; fall back to last Filter Assets result.
     live_directions = get_export_directions(df_scanner["Asset"].tolist(), allow_live_mt5=True)
     if live_directions:
@@ -481,9 +400,13 @@ if not df_assets.empty:
         r"\volatile",
         "Min Lot",
         "Min-Margin ($)",
-        "Pip Value ($/min)",
-        "Velocity (pips/min)",
     ]
+    volatile_options = load_options()
+    volatile_option_labels = option_labels(volatile_options)
+    volatile_help = (
+        " · ".join(f"{o['label']} ({format_option_scale(o)})" for o in volatile_options)
+        or "Configure options in Settings → Volatile"
+    )
     volatile_ratings = load_volatile()
     df_scanner[r"\volatile"] = df_scanner["Asset"].map(
         lambda asset: volatile_ratings.get(asset)
@@ -578,11 +501,8 @@ if not df_assets.empty:
                 ),
                 r"\volatile": st.column_config.TextColumn(
                     r"\volatile",
-                    help="very · in-between · not — select row(s) and set below",
+                    help=f"{volatile_help} — select row(s) and set below",
                     width="small",
-                ),
-                "Pip Value ($/min)": st.column_config.NumberColumn(
-                    "Pip Value ($/min)", format="$%.4f"
                 ),
             },
         )
@@ -606,10 +526,10 @@ if not df_assets.empty:
         with vol_col:
             volatile_choice = st.selectbox(
                 r"\volatile",
-                options=list(VOLATILE_OPTIONS),
+                options=list(volatile_option_labels) or [""],
                 key=f"volatile_choice_{table_key}",
                 label_visibility="collapsed",
-                disabled=selection_count == 0,
+                disabled=selection_count == 0 or not volatile_option_labels,
             )
         with vol_btn_col:
             if st.button(

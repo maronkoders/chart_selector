@@ -1,5 +1,31 @@
 {
-  "Volatility 150 (1s) Index": "not",
-  "Jump 100 Index": "very",
-  "Volatility 50 Index": "not"
+  "options": [
+    {
+      "label": "not",
+      "operator": "<=",
+      "scale": 2.0
+    },
+    {
+      "label": "tiny",
+      "operator": "<=",
+      "scale": 8.0
+    },
+    {
+      "label": "in-between",
+      "operator": "<=",
+      "scale": 64.0
+    },
+    {
+      "label": "very",
+      "operator": ">",
+      "scale": 65.0
+    }
+  ],
+  "ratings": {
+    "Volatility 150 (1s) Index": "not",
+    "Jump 100 Index": "not",
+    "Volatility 50 Index": "very",
+    "Jump 10 Index": "in-between",
+    "Volatility 10 Index": "in-between"
+  }
 }
