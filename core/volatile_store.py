@@ -136,6 +136,56 @@ def format_option_scale(opt: dict) -> str:
     return f"{opt['operator']}{opt['scale']:g}"
 
 
+def value_matches_scale(value: float, operator: str, scale: float) -> bool:
+    if operator == "<":
+        return value < scale
+    if operator == "<=":
+        return value <= scale
+    if operator == ">":
+        return value > scale
+    if operator == ">=":
+        return value >= scale
+    if operator == "=":
+        return value == scale
+    return False
+
+
+def volatile_labels_for_account(
+    account_size: float,
+    options: list[dict] | None = None,
+) -> set[str]:
+    """Pick the volatile label(s) whose scale the account size falls into.
+
+    Upper-bound options (<, <=) are checked tightest-first so e.g. account 1.5
+    with not<=2 and tiny<=8 resolves to ``not`` only. Equality options win when
+    exact. Open-ended lower bounds (>, >=) are used when no upper band fits.
+    """
+    opts = options if options is not None else load_options()
+    if not opts:
+        return set()
+
+    for opt in opts:
+        if opt["operator"] == "=" and value_matches_scale(
+            account_size, opt["operator"], opt["scale"]
+        ):
+            return {opt["label"]}
+
+    upper = sorted(
+        (o for o in opts if o["operator"] in ("<", "<=")),
+        key=lambda o: o["scale"],
+    )
+    for opt in upper:
+        if value_matches_scale(account_size, opt["operator"], opt["scale"]):
+            return {opt["label"]}
+
+    return {
+        opt["label"]
+        for opt in opts
+        if opt["operator"] in (">", ">=")
+        and value_matches_scale(account_size, opt["operator"], opt["scale"])
+    }
+
+
 def load_volatile() -> dict[str, str]:
     return load_store()["ratings"]
 

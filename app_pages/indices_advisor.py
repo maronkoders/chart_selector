@@ -29,6 +29,7 @@ from core.volatile_store import (
     load_options,
     load_volatile,
     option_labels,
+    volatile_labels_for_account,
 )
 
 BIAS_ARROW = {
@@ -437,6 +438,8 @@ if not df_assets.empty:
             label_visibility="collapsed",
         )
 
+    allowed_volatile = volatile_labels_for_account(account_size, volatile_options)
+
     df_filtered = df_scanner.copy()
     if selected_classes:
         df_filtered = df_filtered[df_filtered["Index Class"].isin(selected_classes)]
@@ -444,11 +447,24 @@ if not df_assets.empty:
         df_filtered = df_filtered[
             df_filtered["Asset"].str.contains(search_query.strip(), case=False, na=False)
         ]
+    # Addon: only assets whose \\volatile scale band matches account size
+    if allowed_volatile:
+        df_filtered = df_filtered[
+            df_filtered[r"\volatile"].isin(allowed_volatile)
+        ]
+    else:
+        df_filtered = df_filtered.iloc[0:0]
 
     filtered_count = len(df_filtered)
     total_pages = max(1, math.ceil(filtered_count / page_size))
 
-    filter_key = (search_query.strip(), tuple(sorted(selected_classes)), page_size)
+    filter_key = (
+        search_query.strip(),
+        tuple(sorted(selected_classes)),
+        page_size,
+        tuple(sorted(allowed_volatile)),
+        round(float(account_size), 4),
+    )
     if st.session_state.get("asset_filter_key") != filter_key:
         st.session_state.asset_filter_key = filter_key
         st.session_state.asset_page = 0
@@ -466,14 +482,20 @@ if not df_assets.empty:
         st.caption(f"Watchlist: 0 · Hidden: {len(hidden_assets)}")
         st.info("No assets left in the watchlist. Unhide assets from the sidebar or run Filter Assets again.")
     elif filtered_count == 0:
+        allowed_txt = ", ".join(sorted(allowed_volatile)) or "none"
         st.caption(f"No matches (Watchlist: {total_assets} · Hidden: {len(hidden_assets)})")
-        st.info("No assets match your search or filter criteria.")
+        st.info(
+            f"No assets match your search/filter criteria for this account size "
+            f"(${account_size:,.2f} → \\volatile: {allowed_txt})."
+        )
     else:
         showing_from = page_start + 1
         showing_to = min(page_end, filtered_count)
+        allowed_txt = ", ".join(sorted(allowed_volatile)) or "none"
         st.caption(
             f"Showing {showing_from}-{showing_to} of {filtered_count} "
-            f"(Watchlist: {total_assets} · Hidden: {len(hidden_assets)})"
+            f"(Watchlist: {total_assets} · Hidden: {len(hidden_assets)} · "
+            f"\\volatile for ${account_size:,.2f}: {allowed_txt})"
         )
 
         row_height = 35
