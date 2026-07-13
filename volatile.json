@@ -26,6 +26,7 @@
     "Jump 100 Index": "not",
     "Volatility 50 Index": "very",
     "Jump 10 Index": "in-between",
-    "Volatility 10 Index": "in-between"
+    "Volatility 10 Index": "in-between",
+    "Boom 1000 Index": "not"
   }
 }

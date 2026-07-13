@@ -1,6 +1,10 @@
 import os
+import json
 import subprocess
 import sys
+from pathlib import Path
+
+import pandas as pd
 import streamlit as st
 
 from core import mt5_client
@@ -23,13 +27,47 @@ from core.broker_universe import (
     get_enabled_index_classes,
     advisor_title,
 )
+from core.hidden_assets_store import load_hidden_assets
 from core.volatile_store import (
     OPERATORS,
+    apply_volatile_edits,
     delete_option,
     format_option_scale,
     load_options,
+    load_volatile,
+    option_labels,
     upsert_option,
 )
+
+ASSET_SNAPSHOT_FILE = Path(__file__).resolve().parent.parent / "asset_snapshot.json"
+
+
+def _assets_for_volatile_assignment() -> list[str]:
+    """Scanned Safe Size assets (incl. bias-hidden), rated assets, and last snapshot."""
+    assets: set[str] = set()
+    for row in st.session_state.get("asset_data") or []:
+        name = row.get("Asset")
+        if not name:
+            continue
+        suitable = row.get("Suitable")
+        if suitable is None or suitable == "🟢 Safe Size":
+            assets.add(str(name))
+
+    assets.update(load_volatile().keys())
+
+    if ASSET_SNAPSHOT_FILE.exists():
+        try:
+            snap = json.loads(ASSET_SNAPSHOT_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            snap = []
+        if isinstance(snap, list):
+            for row in snap:
+                name = row.get("Asset") if isinstance(row, dict) else None
+                if name:
+                    assets.add(str(name))
+
+    return sorted(assets)
+
 
 st.title("⚙️ Settings")
 
@@ -540,3 +578,91 @@ with tab5:
         st.markdown(lines)
     else:
         st.caption("Add options to see the summary.")
+
+    st.divider()
+    st.subheader("Assign \\volatile to watchlist assets")
+    st.caption(
+        "Set ratings here for every scanned Safe Size asset — including ones currently "
+        "hidden by bias or filtered out by account size on Indices Advisor."
+    )
+
+    labels = list(option_labels(options))
+    if not labels:
+        st.warning("Add at least one volatile option above before assigning ratings.")
+    else:
+        assets = _assets_for_volatile_assignment()
+        if not assets:
+            st.info(
+                "No assets found yet. Open Indices Advisor and run a scan / Filter Assets first."
+            )
+        else:
+            profile_name, _ = get_active_profile(cfg)
+            hidden = load_hidden_assets(profile_name)
+            ratings = load_volatile()
+            clear_label = "— clear —"
+            select_options = [clear_label] + labels
+
+            editor_df = pd.DataFrame(
+                {
+                    "Asset": assets,
+                    "Status": [
+                        "Hidden" if asset in hidden else "Watchlist"
+                        for asset in assets
+                    ],
+                    r"\volatile": [
+                        ratings.get(asset, clear_label)
+                        if ratings.get(asset) in labels
+                        else clear_label
+                        for asset in assets
+                    ],
+                }
+            )
+
+            edited_df = st.data_editor(
+                editor_df,
+                hide_index=True,
+                width="stretch",
+                height=min(420, 38 + 35 * max(len(editor_df), 1)),
+                disabled=["Asset", "Status"],
+                column_config={
+                    "Asset": st.column_config.TextColumn("Asset", width="large"),
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        help="Watchlist = currently shown · Hidden = bias-hidden (still editable here)",
+                        width="small",
+                    ),
+                    r"\volatile": st.column_config.SelectboxColumn(
+                        r"\volatile",
+                        options=select_options,
+                        required=True,
+                        width="medium",
+                    ),
+                },
+                key="settings_volatile_ratings_editor",
+            )
+
+            c_save, c_meta = st.columns([1, 2])
+            with c_save:
+                save_ratings = st.button(
+                    "💾 Save ratings",
+                    use_container_width=True,
+                    key="save_volatile_ratings",
+                )
+            with c_meta:
+                st.caption(
+                    f"{len(assets)} asset(s) · {len(hidden)} currently bias-hidden"
+                )
+
+            if save_ratings:
+                payload = {
+                    str(row["Asset"]): (
+                        ""
+                        if row[r"\volatile"] == clear_label
+                        else str(row[r"\volatile"])
+                    )
+                    for _, row in edited_df.iterrows()
+                    if row.get("Asset")
+                }
+                apply_volatile_edits(payload)
+                st.success(f"Saved \\volatile for {len(payload)} asset(s).")
+                st.rerun()
