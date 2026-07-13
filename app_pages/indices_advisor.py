@@ -23,6 +23,11 @@ from core.hidden_assets_store import (
     clear_hidden_assets,
     save_hidden_assets,
 )
+from core.volatile_store import (
+    VOLATILE_OPTIONS,
+    apply_volatile_edits,
+    load_volatile,
+)
 from core.velocity import compute_price_velocity
 
 BIAS_ARROW = {
@@ -473,11 +478,16 @@ if not df_assets.empty:
     display_columns = [
         "Asset",
         "Bias",
+        r"\volatile",
         "Min Lot",
         "Min-Margin ($)",
         "Pip Value ($/min)",
         "Velocity (pips/min)",
     ]
+    volatile_ratings = load_volatile()
+    df_scanner[r"\volatile"] = df_scanner["Asset"].map(
+        lambda asset: volatile_ratings.get(asset)
+    )
     total_assets = len(df_scanner)
     index_classes = sorted(df_scanner["Index Class"].unique()) if not df_scanner.empty else []
 
@@ -566,6 +576,11 @@ if not df_assets.empty:
                     help="↑ blue = bullish (BUY) · ↓ red = bearish (SELL)",
                     width="small",
                 ),
+                r"\volatile": st.column_config.TextColumn(
+                    r"\volatile",
+                    help="very · in-between · not — select row(s) and set below",
+                    width="small",
+                ),
                 "Pip Value ($/min)": st.column_config.NumberColumn(
                     "Pip Value ($/min)", format="$%.4f"
                 ),
@@ -585,7 +600,26 @@ if not df_assets.empty:
         ]
         selection_count = len(selected_assets)
 
-        hide_col, prev_col, page_col, next_col = st.columns([1.6, 1, 1.2, 1], gap="small")
+        vol_col, vol_btn_col, hide_col, prev_col, page_col, next_col = st.columns(
+            [1.4, 1.2, 1.6, 1, 1.2, 1], gap="small"
+        )
+        with vol_col:
+            volatile_choice = st.selectbox(
+                r"\volatile",
+                options=list(VOLATILE_OPTIONS),
+                key=f"volatile_choice_{table_key}",
+                label_visibility="collapsed",
+                disabled=selection_count == 0,
+            )
+        with vol_btn_col:
+            if st.button(
+                r"Set \volatile",
+                disabled=selection_count == 0,
+                width="stretch",
+                help=r"Save \volatile for the selected asset(s)",
+            ):
+                apply_volatile_edits({asset: volatile_choice for asset in selected_assets})
+                st.rerun()
         with hide_col:
             hide_label = (
                 f"🙈 Hide {selection_count}"
