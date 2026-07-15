@@ -402,13 +402,13 @@ if not df_assets.empty:
         "Min Lot",
         "Min-Margin ($)",
     ]
-    volatile_options = load_options()
+    volatile_options = load_options(profile_name)
     volatile_option_labels = option_labels(volatile_options)
     volatile_help = (
         " · ".join(f"{o['label']} ({format_option_scale(o)})" for o in volatile_options)
         or "Configure options in Settings → Volatile"
     )
-    volatile_ratings = load_volatile()
+    volatile_ratings = load_volatile(profile_name)
     df_scanner[r"\volatile"] = df_scanner["Asset"].map(
         lambda asset: volatile_ratings.get(asset)
     )
@@ -560,7 +560,10 @@ if not df_assets.empty:
                 width="stretch",
                 help=r"Save \volatile for the selected asset(s)",
             ):
-                apply_volatile_edits({asset: volatile_choice for asset in selected_assets})
+                apply_volatile_edits(
+                    {asset: volatile_choice for asset in selected_assets},
+                    profile_name=profile_name,
+                )
                 st.rerun()
         with hide_col:
             hide_label = (

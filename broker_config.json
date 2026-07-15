@@ -99,14 +99,15 @@
       },
       "trading_plan": "40%",
       "enabled_index_classes": [
-        "FX Vol"
+        "FX Vol",
+        "SFX Vol"
       ]
     }
   },
-  "active_profile": "DerivVU",
+  "active_profile": "Main",
   "risk": {
-    "account_size": 1.0,
-    "risk_percentage": 41.32
+    "account_size": 0.35,
+    "risk_percentage": 50.1
   },
   "trading_plans": {
     "$1 challenge": {

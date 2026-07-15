@@ -206,6 +206,40 @@ def get_index_class(asset_name: str, universe: dict[str, Any]) -> str:
     return "Other"
 
 
+def asset_name_in_broker_universe(symbol_name: str, universe: dict[str, Any]) -> bool:
+    """True if an asset name belongs to this broker universe when path is unknown.
+
+    Used by Settings assign UI (names only — no MT5 path). Skips path_contains
+    checks from ``is_symbol_allowed``, but still enforces excludes, Crash/Boom
+    numbers, known index classes, and enabled_index_classes.
+    """
+    import re
+
+    name_lower = symbol_name.lower()
+
+    for keyword in universe.get("exclude_keywords") or []:
+        if keyword.lower() in name_lower:
+            return False
+
+    allowed_numbers = set(universe.get("crash_boom_numbers") or [])
+    if allowed_numbers and ("crash" in name_lower or "boom" in name_lower):
+        numbers = re.findall(r"\d+", symbol_name)
+        if not numbers or numbers[0] not in allowed_numbers:
+            return False
+
+    keywords = universe.get("index_class_keywords") or []
+    if keywords:
+        symbol_class = get_index_class(symbol_name, universe)
+        if symbol_class == "Other":
+            return False
+        if "enabled_index_classes" in universe:
+            enabled = set(universe.get("enabled_index_classes") or [])
+            if symbol_class not in enabled:
+                return False
+
+    return True
+
+
 def advisor_title(broker_type: str) -> str:
     if broker_type == BROKER_TYPE_WELTRADE:
         return "🎯 Weltrade Synthetic Indices Advisor"

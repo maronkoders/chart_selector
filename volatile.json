@@ -1,32 +1,88 @@
 {
-  "options": [
-    {
-      "label": "not",
-      "operator": "<=",
-      "scale": 2.0
+  "by_profile": {
+    "Weltrade": {
+      "options": [
+        {
+          "label": "not",
+          "operator": "<=",
+          "scale": 20.0
+        },
+        {
+          "label": "tiny",
+          "operator": "<=",
+          "scale": 40.0
+        },
+        {
+          "label": "in-between",
+          "operator": "<=",
+          "scale": 320.0
+        },
+        {
+          "label": "very",
+          "operator": ">",
+          "scale": 640.0
+        }
+      ],
+      "ratings": {
+        "Volatility 150 (1s) Index": "not",
+        "Jump 100 Index": "not",
+        "Volatility 50 Index": "very",
+        "Jump 10 Index": "tiny",
+        "Volatility 10 Index": "in-between",
+        "Boom 1000 Index": "not",
+        "Volatility 250 (1s) Index": "not",
+        "FX Vol 40": "in-between",
+        "FX Vol 20": "not",
+        "FX Vol 60": "tiny",
+        "FX Vol 80": "tiny",
+        "FX Vol 99": "very"
+      }
     },
-    {
-      "label": "tiny",
-      "operator": "<=",
-      "scale": 8.0
-    },
-    {
-      "label": "in-between",
-      "operator": "<=",
-      "scale": 64.0
-    },
-    {
-      "label": "very",
-      "operator": ">",
-      "scale": 65.0
+    "Main": {
+      "options": [
+        {
+          "label": "not",
+          "operator": "<",
+          "scale": 8.0
+        },
+        {
+          "label": "tiny",
+          "operator": "<=",
+          "scale": 32.0
+        },
+        {
+          "label": "in-between",
+          "operator": "<=",
+          "scale": 128.0
+        },
+        {
+          "label": "very",
+          "operator": ">",
+          "scale": 129.0
+        }
+      ],
+      "ratings": {
+        "Boom 1000 Index": "tiny",
+        "Boom 300 Index": "in-between",
+        "Boom 500 Index": "tiny",
+        "Boom 600 Index": "not",
+        "Boom 900 Index": "tiny",
+        "Crash 1000 Index": "not",
+        "Crash 300 Index": "in-between",
+        "Crash 500 Index": "not",
+        "Crash 600 Index": "very",
+        "Crash 900 Index": "very",
+        "Jump 10 Index": "not",
+        "Jump 100 Index": "not",
+        "Jump 25 Index": "tiny",
+        "Jump 50 Index": "in-between",
+        "Jump 75 Index": "not",
+        "Step Index": "tiny",
+        "Step Index 200": "tiny",
+        "Step Index 300": "in-between",
+        "Step Index 400": "very",
+        "Step Index 500": "very"
+      }
     }
-  ],
-  "ratings": {
-    "Volatility 150 (1s) Index": "not",
-    "Jump 100 Index": "not",
-    "Volatility 50 Index": "very",
-    "Jump 10 Index": "in-between",
-    "Volatility 10 Index": "in-between",
-    "Boom 1000 Index": "not"
   }
 }

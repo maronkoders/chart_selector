@@ -1,15 +1,19 @@
-"""Per-asset \\volatile ratings and configurable option scales.
+"""Per-profile \\volatile ratings and configurable option scales.
 
 volatile.json shape:
 {
-  "options": [
-    {"label": "not", "operator": "<", "scale": 2.5},
+  "by_profile": {
+    "Weltrade": {
+      "options": [{"label": "not", "operator": "<", "scale": 2.5}, ...],
+      "ratings": {"Asset Name": "not", ...}
+    },
     ...
-  ],
-  "ratings": {"Asset Name": "not", ...}
+  }
 }
 
-Legacy flat {asset: rating} files are migrated on load.
+Legacy flat {options, ratings} files migrate under "_default". Profiles that
+have not been saved yet inherit from "_default" (or built-in defaults) until
+their first edit, which forks a profile-specific copy.
 """
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ from pathlib import Path
 VOLATILE_FILE = Path(__file__).resolve().parent.parent / "volatile.json"
 DEFAULT_VOLATILE = ""
 OPERATORS = ("<", "<=", ">", ">=", "=")
+DEFAULT_PROFILE_KEY = "_default"
 
 DEFAULT_OPTIONS = [
     {"label": "not", "operator": "<", "scale": 2.5},
@@ -44,14 +49,43 @@ def _normalize_option(raw) -> dict | None:
     return {"label": label, "operator": op, "scale": scale}
 
 
-def _default_store() -> dict:
+def _default_bucket() -> dict:
     return {
         "options": [dict(o) for o in DEFAULT_OPTIONS],
         "ratings": {},
     }
 
 
-def _migrate_legacy(data: dict) -> dict:
+def _normalize_bucket(raw) -> dict:
+    if not isinstance(raw, dict):
+        return _default_bucket()
+    options = []
+    for item in raw.get("options") or []:
+        opt = _normalize_option(item)
+        if opt:
+            options.append(opt)
+    if not options:
+        options = [dict(o) for o in DEFAULT_OPTIONS]
+    labels = {o["label"] for o in options}
+    ratings_raw = raw.get("ratings")
+    if not isinstance(ratings_raw, dict):
+        ratings_raw = {}
+    ratings = {
+        str(asset): str(value).strip().lower()
+        for asset, value in ratings_raw.items()
+        if str(value).strip().lower() in labels
+    }
+    return {"options": options, "ratings": ratings}
+
+
+def _copy_bucket(bucket: dict) -> dict:
+    return {
+        "options": [dict(o) for o in bucket.get("options") or []],
+        "ratings": dict(bucket.get("ratings") or {}),
+    }
+
+
+def _migrate_legacy_flat(data: dict) -> dict:
     """Treat a flat asset→rating map as ratings; seed default options."""
     option_labels = {o["label"] for o in DEFAULT_OPTIONS}
     ratings = {
@@ -60,73 +94,109 @@ def _migrate_legacy(data: dict) -> dict:
         if str(value).strip().lower() in option_labels
     }
     return {
-        "options": [dict(o) for o in DEFAULT_OPTIONS],
-        "ratings": ratings,
+        "by_profile": {
+            DEFAULT_PROFILE_KEY: {
+                "options": [dict(o) for o in DEFAULT_OPTIONS],
+                "ratings": ratings,
+            }
+        }
     }
+
+
+def _migrate_global_options_ratings(data: dict) -> dict:
+    return {
+        "by_profile": {
+            DEFAULT_PROFILE_KEY: _normalize_bucket(data),
+        }
+    }
+
+
+def _profile_key(profile_name: str | None) -> str:
+    return profile_name or DEFAULT_PROFILE_KEY
 
 
 def load_store() -> dict:
     if not VOLATILE_FILE.exists():
-        return _default_store()
+        return {"by_profile": {DEFAULT_PROFILE_KEY: _default_bucket()}}
+
     try:
         data = json.loads(VOLATILE_FILE.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        return _default_store()
+        return {"by_profile": {DEFAULT_PROFILE_KEY: _default_bucket()}}
+
     if not isinstance(data, dict):
-        return _default_store()
+        return {"by_profile": {DEFAULT_PROFILE_KEY: _default_bucket()}}
 
-    # New format
+    # New per-profile format
+    if isinstance(data.get("by_profile"), dict):
+        by_profile = {}
+        for name, raw in data["by_profile"].items():
+            by_profile[str(name)] = _normalize_bucket(raw)
+        if not by_profile:
+            by_profile[DEFAULT_PROFILE_KEY] = _default_bucket()
+        return {"by_profile": by_profile}
+
+    # Previous global {options, ratings}
     if "options" in data or "ratings" in data:
-        options = []
-        for raw in data.get("options") or []:
-            opt = _normalize_option(raw)
-            if opt:
-                options.append(opt)
-        if not options:
-            options = [dict(o) for o in DEFAULT_OPTIONS]
-        labels = {o["label"] for o in options}
-        ratings_raw = data.get("ratings")
-        if not isinstance(ratings_raw, dict):
-            ratings_raw = {}
-        ratings = {
-            str(asset): str(value).strip().lower()
-            for asset, value in ratings_raw.items()
-            if str(value).strip().lower() in labels
-        }
-        return {"options": options, "ratings": ratings}
+        return _migrate_global_options_ratings(data)
 
-    # Legacy flat map
-    return _migrate_legacy(data)
+    # Oldest flat asset→rating map
+    return _migrate_legacy_flat(data)
 
 
 def save_store(store: dict) -> None:
-    options = []
-    for raw in store.get("options") or []:
-        opt = _normalize_option(raw)
-        if opt:
-            options.append(opt)
-    labels = {o["label"] for o in options}
-    ratings = {
-        str(asset): str(value).strip().lower()
-        for asset, value in (store.get("ratings") or {}).items()
-        if str(value).strip().lower() in labels
+    by_profile_in = store.get("by_profile")
+    if not isinstance(by_profile_in, dict):
+        by_profile_in = {}
+    by_profile = {
+        str(name): _normalize_bucket(raw) for name, raw in by_profile_in.items()
     }
-    payload = {"options": options, "ratings": ratings}
+    if not by_profile:
+        by_profile[DEFAULT_PROFILE_KEY] = _default_bucket()
+    payload = {"by_profile": by_profile}
     VOLATILE_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def load_options() -> list[dict]:
-    return load_store()["options"]
+def _resolve_bucket(store: dict, profile_name: str | None) -> tuple[dict, str, bool]:
+    """Return (bucket, storage_key, inherited).
+
+    Inherited buckets come from ``_default`` (or built-ins) and must be forked
+    on write into ``storage_key``.
+    """
+    by_profile = store.setdefault("by_profile", {})
+    key = _profile_key(profile_name)
+    if key in by_profile:
+        return by_profile[key], key, False
+    if DEFAULT_PROFILE_KEY in by_profile:
+        return by_profile[DEFAULT_PROFILE_KEY], key, True
+    return _default_bucket(), key, True
 
 
-def option_labels(options: list[dict] | None = None) -> tuple[str, ...]:
-    opts = options if options is not None else load_options()
+def _writable_bucket(store: dict, profile_name: str | None) -> dict:
+    bucket, key, inherited = _resolve_bucket(store, profile_name)
+    by_profile = store.setdefault("by_profile", {})
+    if inherited or key not in by_profile:
+        by_profile[key] = _copy_bucket(bucket)
+    return by_profile[key]
+
+
+def load_options(profile_name: str | None = None) -> list[dict]:
+    store = load_store()
+    bucket, _, _ = _resolve_bucket(store, profile_name)
+    return [dict(o) for o in bucket["options"]]
+
+
+def option_labels(
+    options: list[dict] | None = None,
+    profile_name: str | None = None,
+) -> tuple[str, ...]:
+    opts = options if options is not None else load_options(profile_name)
     return tuple(o["label"] for o in opts)
 
 
 # Back-compat alias used by older call sites
-def get_volatile_options() -> tuple[str, ...]:
-    return option_labels()
+def get_volatile_options(profile_name: str | None = None) -> tuple[str, ...]:
+    return option_labels(profile_name=profile_name)
 
 
 VOLATILE_OPTIONS = tuple(o["label"] for o in DEFAULT_OPTIONS)
@@ -153,6 +223,7 @@ def value_matches_scale(value: float, operator: str, scale: float) -> bool:
 def volatile_labels_for_account(
     account_size: float,
     options: list[dict] | None = None,
+    profile_name: str | None = None,
 ) -> set[str]:
     """Pick the volatile label(s) whose scale the account size falls into.
 
@@ -160,7 +231,7 @@ def volatile_labels_for_account(
     with not<=2 and tiny<=8 resolves to ``not`` only. Equality options win when
     exact. Open-ended lower bounds (>, >=) are used when no upper band fits.
     """
-    opts = options if options is not None else load_options()
+    opts = options if options is not None else load_options(profile_name)
     if not opts:
         return set()
 
@@ -186,53 +257,71 @@ def volatile_labels_for_account(
     }
 
 
-def load_volatile() -> dict[str, str]:
-    return load_store()["ratings"]
-
-
-def save_volatile(ratings: dict[str, str]) -> None:
+def load_volatile(profile_name: str | None = None) -> dict[str, str]:
     store = load_store()
-    store["ratings"] = ratings
+    bucket, _, _ = _resolve_bucket(store, profile_name)
+    return dict(bucket["ratings"])
+
+
+def save_volatile(ratings: dict[str, str], profile_name: str | None = None) -> None:
+    store = load_store()
+    bucket = _writable_bucket(store, profile_name)
+    bucket["ratings"] = ratings
     save_store(store)
 
 
-def get_volatile(asset: str, ratings: dict[str, str] | None = None) -> str:
-    store_ratings = ratings if ratings is not None else load_volatile()
+def get_volatile(
+    asset: str,
+    ratings: dict[str, str] | None = None,
+    profile_name: str | None = None,
+) -> str:
+    store_ratings = ratings if ratings is not None else load_volatile(profile_name)
     return store_ratings.get(asset, DEFAULT_VOLATILE)
 
 
-def set_volatile(asset: str, value: str) -> None:
+def set_volatile(asset: str, value: str, profile_name: str | None = None) -> None:
     store = load_store()
-    labels = {o["label"] for o in store["options"]}
+    bucket = _writable_bucket(store, profile_name)
+    labels = {o["label"] for o in bucket["options"]}
     value = (value or "").strip().lower()
     if value in labels:
-        store["ratings"][asset] = value
+        bucket["ratings"][asset] = value
     else:
-        store["ratings"].pop(asset, None)
+        bucket["ratings"].pop(asset, None)
     save_store(store)
 
 
-def apply_volatile_edits(edited_rows: dict[str, str]) -> None:
-    """Merge edited asset→value pairs into the JSON store."""
+def apply_volatile_edits(
+    edited_rows: dict[str, str],
+    profile_name: str | None = None,
+) -> None:
+    """Merge edited asset→value pairs into the profile's JSON store."""
     store = load_store()
-    labels = {o["label"] for o in store["options"]}
+    bucket = _writable_bucket(store, profile_name)
+    labels = {o["label"] for o in bucket["options"]}
     changed = False
     for asset, value in edited_rows.items():
         if not asset:
             continue
         value = (value or "").strip().lower()
         if value in labels:
-            if store["ratings"].get(asset) != value:
-                store["ratings"][asset] = value
+            if bucket["ratings"].get(asset) != value:
+                bucket["ratings"][asset] = value
                 changed = True
-        elif asset in store["ratings"]:
-            del store["ratings"][asset]
+        elif asset in bucket["ratings"]:
+            del bucket["ratings"][asset]
             changed = True
     if changed:
         save_store(store)
 
 
-def upsert_option(label: str, operator: str, scale: float, replace_label: str | None = None) -> tuple[bool, str]:
+def upsert_option(
+    label: str,
+    operator: str,
+    scale: float,
+    replace_label: str | None = None,
+    profile_name: str | None = None,
+) -> tuple[bool, str]:
     """Add or update an option. Returns (ok, message)."""
     label = (label or "").strip().lower()
     if not label:
@@ -245,7 +334,8 @@ def upsert_option(label: str, operator: str, scale: float, replace_label: str | 
         return False, "Scale must be a number."
 
     store = load_store()
-    options = store["options"]
+    bucket = _writable_bucket(store, profile_name)
+    options = bucket["options"]
     new_opt = {"label": label, "operator": operator, "scale": scale}
 
     if replace_label:
@@ -253,44 +343,46 @@ def upsert_option(label: str, operator: str, scale: float, replace_label: str | 
         idx = next((i for i, o in enumerate(options) if o["label"] == replace_label), None)
         if idx is None:
             return False, f"Option '{replace_label}' not found."
-        # Renaming onto an existing different label
         if label != replace_label and any(o["label"] == label for o in options):
             return False, f"Option '{label}' already exists."
         options[idx] = new_opt
         if label != replace_label:
-            for asset, rating in list(store["ratings"].items()):
+            for asset, rating in list(bucket["ratings"].items()):
                 if rating == replace_label:
-                    store["ratings"][asset] = label
+                    bucket["ratings"][asset] = label
     else:
         if any(o["label"] == label for o in options):
             return False, f"Option '{label}' already exists."
         options.append(new_opt)
 
-    store["options"] = options
+    bucket["options"] = options
     save_store(store)
     return True, f"Saved option '{label}' ({format_option_scale(new_opt)})."
 
 
-def delete_option(label: str) -> tuple[bool, str]:
+def delete_option(label: str, profile_name: str | None = None) -> tuple[bool, str]:
     label = (label or "").strip().lower()
     store = load_store()
-    before = len(store["options"])
-    store["options"] = [o for o in store["options"] if o["label"] != label]
-    if len(store["options"]) == before:
+    bucket = _writable_bucket(store, profile_name)
+    before = len(bucket["options"])
+    bucket["options"] = [o for o in bucket["options"] if o["label"] != label]
+    if len(bucket["options"]) == before:
         return False, f"Option '{label}' not found."
-    if not store["options"]:
+    if not bucket["options"]:
         return False, "At least one volatile option is required."
-    # Drop ratings that used the deleted label
-    store["ratings"] = {
+    bucket["ratings"] = {
         asset: value
-        for asset, value in store["ratings"].items()
+        for asset, value in bucket["ratings"].items()
         if value != label
     }
     save_store(store)
     return True, f"Deleted option '{label}'."
 
 
-def save_options(options: list[dict]) -> tuple[bool, str]:
+def save_options(
+    options: list[dict],
+    profile_name: str | None = None,
+) -> tuple[bool, str]:
     """Replace the full options list (e.g. after bulk reorder/edit)."""
     normalized = []
     seen = set()
@@ -305,6 +397,7 @@ def save_options(options: list[dict]) -> tuple[bool, str]:
     if not normalized:
         return False, "At least one volatile option is required."
     store = load_store()
-    store["options"] = normalized
+    bucket = _writable_bucket(store, profile_name)
+    bucket["options"] = normalized
     save_store(store)
     return True, f"Saved {len(normalized)} option(s)."

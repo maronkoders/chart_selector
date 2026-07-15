@@ -1,8 +1,6 @@
 import os
-import json
 import subprocess
 import sys
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -26,6 +24,8 @@ from core.broker_universe import (
     available_index_classes,
     get_enabled_index_classes,
     advisor_title,
+    asset_name_in_broker_universe,
+    is_symbol_allowed,
 )
 from core.hidden_assets_store import load_hidden_assets
 from core.volatile_store import (
@@ -39,32 +39,52 @@ from core.volatile_store import (
     upsert_option,
 )
 
-ASSET_SNAPSHOT_FILE = Path(__file__).resolve().parent.parent / "asset_snapshot.json"
 
+def _assets_for_volatile_assignment(cfg: dict) -> list[str]:
+    """Full asset list for the active broker profile (no Safe Size / bias filter).
 
-def _assets_for_volatile_assignment() -> list[str]:
-    """Scanned Safe Size assets (incl. bias-hidden), rated assets, and last snapshot."""
+    Includes every scanned symbol for this login, bias-hidden assets, ratings,
+    and (when MT5 is connected) the live universe for the profile.
+    """
+    profile_name, profile = get_active_profile(cfg)
+    universe = get_profile_universe(profile_name, profile)
+
+    def _allowed(name: str) -> bool:
+        return asset_name_in_broker_universe(name, universe)
+
     assets: set[str] = set()
+
     for row in st.session_state.get("asset_data") or []:
         name = row.get("Asset")
-        if not name:
-            continue
-        suitable = row.get("Suitable")
-        if suitable is None or suitable == "🟢 Safe Size":
+        if name and _allowed(str(name)):
             assets.add(str(name))
 
-    assets.update(load_volatile().keys())
+    for name in load_hidden_assets(profile_name):
+        if _allowed(str(name)):
+            assets.add(str(name))
 
-    if ASSET_SNAPSHOT_FILE.exists():
+    for name in load_volatile(profile_name).keys():
+        if _allowed(str(name)):
+            assets.add(str(name))
+
+    # Live MT5 universe for this broker login (same allow rules as Indices Advisor).
+    ok, _ = mt5_client.ensure_connection(cfg)
+    if ok:
         try:
-            snap = json.loads(ASSET_SNAPSHOT_FILE.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            snap = []
-        if isinstance(snap, list):
-            for row in snap:
-                name = row.get("Asset") if isinstance(row, dict) else None
-                if name:
-                    assets.add(str(name))
+            import MetaTrader5 as mt5
+        except ImportError:
+            mt5 = None
+        if mt5 is not None:
+            groups = universe.get("mt5_groups") or ["*"]
+            seen: set[str] = set()
+            for group in groups:
+                for sym in mt5.symbols_get(group=group) or []:
+                    if sym.name in seen:
+                        continue
+                    seen.add(sym.name)
+                    path = getattr(sym, "path", "") or ""
+                    if is_symbol_allowed(sym.name, path, universe) and _allowed(sym.name):
+                        assets.add(sym.name)
 
     return sorted(assets)
 
@@ -475,13 +495,18 @@ with tab4:
 
 # Tab 5: Volatile options / scales ─────────────────────────────────────────────
 with tab5:
+    profile_name, profile = get_active_profile(cfg)
+    broker_type = get_profile_broker_type(profile_name, profile)
+    profile_key = profile_name or "_default"
+
     st.subheader("Volatile Options")
     st.caption(
-        "Define the labels available for the `\\volatile` column on Indices Advisor, "
-        "and the numeric scale each label maps to (e.g. not < 2.5, tiny ≤ 5)."
+        f"Profile: **{profile_name or 'none'}** · {broker_type.replace('_', ' ')}. "
+        "These labels and scales apply only to this broker profile — switch the "
+        "active profile to edit another broker's settings."
     )
 
-    options = load_options()
+    options = load_options(profile_name)
 
     if options:
         st.write("**Current options:**")
@@ -497,8 +522,13 @@ with tab5:
                 with c3:
                     st.code(f"{opt['scale']:g}", language=None)
                 with c4:
-                    if st.button("🗑️", key=f"del_vol_{label}", use_container_width=True, help=f"Delete '{label}'"):
-                        ok, msg = delete_option(label)
+                    if st.button(
+                        "🗑️",
+                        key=f"del_vol_{profile_key}_{label}",
+                        use_container_width=True,
+                        help=f"Delete '{label}'",
+                    ):
+                        ok, msg = delete_option(label, profile_name=profile_name)
                         if ok:
                             st.success(msg)
                         else:
@@ -509,7 +539,8 @@ with tab5:
 
     st.divider()
 
-    editing = st.session_state.get("edit_volatile_option")
+    edit_state_key = f"edit_volatile_option_{profile_key}"
+    editing = st.session_state.get(edit_state_key)
     st.subheader("Add / Edit Option")
     if editing:
         st.caption(f"Editing **{editing}** — change the label to rename.")
@@ -517,7 +548,7 @@ with tab5:
     else:
         existing = None
 
-    with st.form("volatile_option_form", clear_on_submit=not bool(editing)):
+    with st.form(f"volatile_option_form_{profile_key}", clear_on_submit=not bool(editing)):
         label_in = st.text_input(
             "Label",
             value=(existing or {}).get("label", ""),
@@ -545,28 +576,29 @@ with tab5:
                 operator_in,
                 scale_in,
                 replace_label=editing,
+                profile_name=profile_name,
             )
             if ok:
-                st.session_state.pop("edit_volatile_option", None)
+                st.session_state.pop(edit_state_key, None)
                 st.success(msg)
                 st.rerun()
             else:
                 st.error(msg)
 
     if editing:
-        if st.button("Cancel Edit", use_container_width=True):
-            st.session_state.pop("edit_volatile_option", None)
+        if st.button("Cancel Edit", use_container_width=True, key=f"cancel_vol_edit_{profile_key}"):
+            st.session_state.pop(edit_state_key, None)
             st.rerun()
     elif options:
         st.write("**Edit an existing option:**")
         edit_choice = st.selectbox(
             "Pick option to edit",
             options=[o["label"] for o in options],
-            key="volatile_edit_pick",
+            key=f"volatile_edit_pick_{profile_key}",
             label_visibility="collapsed",
         )
-        if st.button("✏️ Edit selected", use_container_width=True):
-            st.session_state.edit_volatile_option = edit_choice
+        if st.button("✏️ Edit selected", use_container_width=True, key=f"edit_vol_btn_{profile_key}"):
+            st.session_state[edit_state_key] = edit_choice
             st.rerun()
 
     st.divider()
@@ -582,23 +614,24 @@ with tab5:
     st.divider()
     st.subheader("Assign \\volatile to watchlist assets")
     st.caption(
-        "Set ratings here for every scanned Safe Size asset — including ones currently "
-        "hidden by bias or filtered out by account size on Indices Advisor."
+        f"Profile: **{profile_name or 'none'}** · {broker_type.replace('_', ' ')}. "
+        "Every asset for this broker login — including bias-hidden ones. "
+        "No Safe Size or account-size filter on this list."
     )
 
     labels = list(option_labels(options))
     if not labels:
         st.warning("Add at least one volatile option above before assigning ratings.")
     else:
-        assets = _assets_for_volatile_assignment()
+        assets = _assets_for_volatile_assignment(cfg)
         if not assets:
             st.info(
-                "No assets found yet. Open Indices Advisor and run a scan / Filter Assets first."
+                "No assets for this broker/account yet. Open Indices Advisor and run a "
+                "scan / Filter Assets while this profile is active."
             )
         else:
-            profile_name, _ = get_active_profile(cfg)
             hidden = load_hidden_assets(profile_name)
-            ratings = load_volatile()
+            ratings = load_volatile(profile_name)
             clear_label = "— clear —"
             select_options = [clear_label] + labels
 
@@ -638,7 +671,7 @@ with tab5:
                         width="medium",
                     ),
                 },
-                key="settings_volatile_ratings_editor",
+                key=f"settings_volatile_ratings_editor_{profile_key}",
             )
 
             c_save, c_meta = st.columns([1, 2])
@@ -646,11 +679,13 @@ with tab5:
                 save_ratings = st.button(
                     "💾 Save ratings",
                     use_container_width=True,
-                    key="save_volatile_ratings",
+                    key=f"save_volatile_ratings_{profile_key}",
                 )
             with c_meta:
+                hidden_in_list = sum(1 for a in assets if a in hidden)
                 st.caption(
-                    f"{len(assets)} asset(s) · {len(hidden)} currently bias-hidden"
+                    f"{len(assets)} asset(s) for {profile_name or 'this profile'} · "
+                    f"{hidden_in_list} bias-hidden in this list"
                 )
 
             if save_ratings:
@@ -663,6 +698,6 @@ with tab5:
                     for _, row in edited_df.iterrows()
                     if row.get("Asset")
                 }
-                apply_volatile_edits(payload)
+                apply_volatile_edits(payload, profile_name=profile_name)
                 st.success(f"Saved \\volatile for {len(payload)} asset(s).")
                 st.rerun()
