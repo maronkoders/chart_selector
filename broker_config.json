@@ -100,13 +100,14 @@
       "trading_plan": "40%",
       "enabled_index_classes": [
         "FX Vol",
-        "SFX Vol"
+        "SFX Vol",
+        "FlipX"
       ]
     }
   },
   "active_profile": "Main",
   "risk": {
-    "account_size": 0.35,
+    "account_size": 1.0,
     "risk_percentage": 50.1
   },
   "trading_plans": {

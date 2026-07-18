@@ -1,0 +1,106 @@
+{
+  "visits": [
+    {
+      "page": "Test",
+      "started_at": "2026-07-18T19:06:57",
+      "finished_at": "2026-07-18T19:06:57",
+      "elapsed_ms": 12.5,
+      "elapsed_sec": 0.013,
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-18T19:10:45",
+      "finished_at": "2026-07-18T19:10:45",
+      "elapsed_ms": 5.7,
+      "elapsed_sec": 0.006,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-18T19:10:48",
+      "finished_at": "2026-07-18T19:10:48",
+      "elapsed_ms": 40.0,
+      "elapsed_sec": 0.04,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-18T19:13:25",
+      "finished_at": "2026-07-18T19:13:25",
+      "elapsed_ms": 7.1,
+      "elapsed_sec": 0.007,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-18T19:13:29",
+      "finished_at": "2026-07-18T19:13:30",
+      "elapsed_ms": 647.1,
+      "elapsed_sec": 0.647,
+      "ok": true,
+      "detail": "Connected as profile 'Main' (login 100979130)."
+    },
+    {
+      "page": "Portfolio Profile",
+      "started_at": "2026-07-18T19:14:50",
+      "finished_at": "2026-07-18T19:14:50",
+      "elapsed_ms": 364.6,
+      "elapsed_sec": 0.365,
+      "ok": true,
+      "detail": "Connected as profile 'Main' (login 100979130)."
+    },
+    {
+      "page": "Portfolio Profile",
+      "started_at": "2026-07-18T19:15:30",
+      "finished_at": "2026-07-18T19:15:30",
+      "elapsed_ms": 8.3,
+      "elapsed_sec": 0.008,
+      "ok": true,
+      "detail": "Connected as profile 'Main' (login 100979130)."
+    }
+  ],
+  "summary": {
+    "Test": {
+      "count": 1,
+      "total_ms": 12.5,
+      "avg_ms": 12.5,
+      "last_ms": 12.5,
+      "min_ms": 12.5,
+      "max_ms": 12.5,
+      "last_at": "2026-07-18T19:06:57"
+    },
+    "Settings": {
+      "count": 3,
+      "total_ms": 52.81040002591908,
+      "avg_ms": 17.6,
+      "last_ms": 7.1,
+      "min_ms": 5.7,
+      "max_ms": 40.0,
+      "last_at": "2026-07-18T19:13:25"
+    },
+    "Dashboard": {
+      "count": 1,
+      "total_ms": 647.0956999983173,
+      "avg_ms": 647.1,
+      "last_ms": 647.1,
+      "min_ms": 647.1,
+      "max_ms": 647.1,
+      "last_at": "2026-07-18T19:13:30"
+    },
+    "Portfolio Profile": {
+      "count": 2,
+      "total_ms": 372.9812000237871,
+      "avg_ms": 186.5,
+      "last_ms": 8.3,
+      "min_ms": 8.3,
+      "max_ms": 364.6,
+      "last_at": "2026-07-18T19:15:30"
+    }
+  },
+  "updated_at": "2026-07-18T19:15:30"
+}

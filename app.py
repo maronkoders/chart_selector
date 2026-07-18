@@ -12,9 +12,12 @@ if "app_config" not in st.session_state:
 
 dashboard_page = st.Page("app_pages/dashboard.py", title="Dashboard", icon="📊", default=True)
 advisor_page = st.Page("app_pages/indices_advisor.py", title="Indices Advisor", icon="🎯")
+portfolio_page = st.Page("app_pages/portfolio_profile.py", title="Portfolio Profile", icon="💼")
 journal_page = st.Page("app_pages/journal.py", title="Journal", icon="📓")
 trading_plan_page = st.Page("app_pages/trading_plan.py", title="Trading Plan", icon="📈")
 settings_page = st.Page("app_pages/settings.py", title="Settings", icon="⚙️")
 
-pg = st.navigation([dashboard_page, advisor_page, journal_page, trading_plan_page, settings_page])
+pg = st.navigation(
+    [dashboard_page, advisor_page, portfolio_page, journal_page, trading_plan_page, settings_page]
+)
 pg.run()

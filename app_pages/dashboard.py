@@ -1,5 +1,9 @@
 import datetime as dt
+import os
+import subprocess
+import sys
 
+import pandas as pd
 import streamlit as st
 
 from core import mt5_client
@@ -7,13 +11,20 @@ from core.calendar_view import build_calendar_html, build_month_grid
 from core.config import load_config, get_profile_plan, calculate_plan_progress, get_active_profile
 from core.plan_frequency import build_week_targets_for_grid
 from core.hidden_assets_store import load_hidden_assets
+from core.page_load_monitor import page_bootstrap, recent_visits, summary_table_rows
 
 st.title("📊 Dashboard")
 
 cfg = st.session_state.setdefault("app_config", load_config())
 
+with page_bootstrap("Dashboard", "Connecting to MT5 and preparing Dashboard…") as boot:
+    ok, msg = mt5_client.ensure_connection(cfg)
+    boot.ok = ok
+    boot.detail = msg
+    loader = mt5_client.chart_loader_status() if ok else {"alive": False}
+    account = mt5_client.get_account_info() if ok else None
+
 status_col, reconnect_col = st.columns([5, 1])
-ok, msg = mt5_client.ensure_connection(cfg)
 with status_col:
     if ok:
         st.success(msg)
@@ -23,13 +34,86 @@ with status_col:
 with reconnect_col:
     st.write("")
     if st.button("🔄 Reconnect", width="stretch"):
-        mt5_client.ensure_connection(cfg, force=True)
+        with page_bootstrap("Dashboard", "Reconnecting…") as boot:
+            ok, msg = mt5_client.ensure_connection(cfg, force=True)
+            boot.ok = ok
+            boot.detail = msg
         st.rerun()
 
 if not ok:
     st.stop()
 
-account = mt5_client.get_account_info()
+# ── ONE-CLICK SYSTEM SYNC ───────────────────────────────────────────────────
+st.divider()
+st.subheader("MT5 System Sync")
+st.caption(
+    "One click: reconnect → sync Market Watch → close open charts → open every "
+    "watchlist chart on M1 with the new_me indicators."
+)
+
+l1, l2 = st.columns([3, 2])
+with l1:
+    if loader.get("alive"):
+        st.success(
+            f"ChartSelectorLoader running on `{loader.get('symbol') or '?'}` "
+            f"(heartbeat {loader.get('age_seconds', '?')}s ago)"
+        )
+    else:
+        st.warning(loader.get("error") or "ChartSelectorLoader is not running.")
+        st.caption(
+            "One-time setup: in MT5, open Navigator → Expert Advisors → new_me → "
+            "ChartSelectorLoader, drag it onto any chart, and turn on Algo Trading."
+        )
+with l2:
+    experts_dir = loader.get("experts_dir")
+    if experts_dir and st.button("📂 Open EA folder", width="stretch"):
+        try:
+            if sys.platform == "win32":
+                os.startfile(experts_dir)
+            elif sys.platform == "darwin":
+                subprocess.run(["open", experts_dir], check=False)
+            else:
+                subprocess.run(["xdg-open", experts_dir], check=False)
+        except Exception as exc:
+            st.error(str(exc))
+
+if st.button("▶ Run MT5 Sync", type="primary", width="stretch"):
+    with page_bootstrap("Dashboard", "Running full MT5 sync…") as boot:
+        result = mt5_client.run_full_system_sync(cfg, force_reconnect=True)
+        boot.ok = bool(result.get("ok"))
+        boot.detail = result.get("error") or "sync complete"
+    st.session_state["last_system_sync"] = result
+    st.rerun()
+
+last = st.session_state.get("last_system_sync")
+if last:
+    mw = last.get("market_watch") or {}
+    charts = last.get("charts") or {}
+    if last.get("ok"):
+        st.success(
+            f"Done — Market Watch {mw.get('desired', 0)} symbol(s); "
+            f"charts closed {charts.get('closed', 0)}, opened {charts.get('opened', 0)}."
+        )
+    elif last.get("error"):
+        st.error(last["error"])
+        if mw:
+            st.info(
+                f"Market Watch still updated ({mw.get('desired', mw.get('added', '?'))} "
+                f"symbol(s)). Start ChartSelectorLoader to refresh charts."
+            )
+
+# ── PAGE LOAD TIMINGS ───────────────────────────────────────────────────────
+st.divider()
+st.subheader("Page load monitor")
+st.caption("How long each page took to finish bootstrap (from `page_load_times.json`).")
+summary_rows = summary_table_rows()
+if summary_rows:
+    st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+    with st.expander("Recent page visits"):
+        st.dataframe(pd.DataFrame(recent_visits(25)), width="stretch", hide_index=True)
+else:
+    st.caption("No page-load timings recorded yet — visit a few pages to populate the log.")
+
 active_plan_data = None  # populated below if the active profile has a linked plan
 
 if account:

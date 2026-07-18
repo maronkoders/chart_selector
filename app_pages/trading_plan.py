@@ -12,10 +12,13 @@ from core.config import (
     get_profile_plan,
     calculate_plan_progress,
 )
+from core.page_load_monitor import page_bootstrap
 
 st.title("📈 Trading Plan")
 
-cfg = st.session_state.setdefault("app_config", load_config())
+with page_bootstrap("Trading Plan", "Loading trading plans…") as boot:
+    cfg = st.session_state.setdefault("app_config", load_config())
+    boot.detail = f"plans={len(cfg.get('trading_plans') or {})}"
 
 st.info(
     "Calculate your trading plan with compound growth. "

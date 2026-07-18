@@ -1,0 +1,379 @@
+{
+  "updated_at": "2026-07-18T19:13:30",
+  "profiles": {
+    "Main": {
+      "login": "100979130",
+      "server": "DerivSVG-Server-02",
+      "balance": 1.0,
+      "equity": 1.0,
+      "updated_at": "2026-07-18T19:13:29",
+      "months": {
+        "2026-02": {
+          "pnl": -24.75,
+          "commission": 0.0,
+          "swap": -0.36,
+          "net_pnl": -25.11,
+          "trades": 45,
+          "wins": 15,
+          "losses": 30
+        },
+        "2026-03": {
+          "pnl": -44.8,
+          "commission": 0.0,
+          "swap": -2.31,
+          "net_pnl": -47.11,
+          "trades": 57,
+          "wins": 23,
+          "losses": 34
+        },
+        "2026-04": {
+          "pnl": 115.4,
+          "commission": 0.0,
+          "swap": -0.44,
+          "net_pnl": 114.96,
+          "trades": 231,
+          "wins": 127,
+          "losses": 104
+        },
+        "2026-05": {
+          "pnl": 53.56,
+          "commission": 0.0,
+          "swap": -0.02,
+          "net_pnl": 53.54,
+          "trades": 172,
+          "wins": 96,
+          "losses": 71
+        },
+        "2026-06": {
+          "pnl": 59.99,
+          "commission": 0.0,
+          "swap": -0.13,
+          "net_pnl": 59.86,
+          "trades": 187,
+          "wins": 73,
+          "losses": 113
+        },
+        "2026-07": {
+          "pnl": -7.47,
+          "commission": 0.0,
+          "swap": 0.0,
+          "net_pnl": -7.47,
+          "trades": 49,
+          "wins": 26,
+          "losses": 22
+        }
+      },
+      "error": null
+    },
+    "DerivVU": {
+      "login": "101239396",
+      "server": "DerivVU-Server-02",
+      "balance": 0.7,
+      "equity": 0.7,
+      "updated_at": "2026-07-18T18:53:50",
+      "months": {
+        "2026-02": {
+          "pnl": 4.8,
+          "commission": 0.0,
+          "swap": -0.86,
+          "net_pnl": 3.94,
+          "trades": 82,
+          "wins": 36,
+          "losses": 45
+        },
+        "2026-03": {
+          "pnl": 37.08,
+          "commission": 0.0,
+          "swap": -2.51,
+          "net_pnl": 34.57,
+          "trades": 134,
+          "wins": 60,
+          "losses": 72
+        },
+        "2026-04": {
+          "pnl": -19.86,
+          "commission": 0.0,
+          "swap": -0.02,
+          "net_pnl": -19.88,
+          "trades": 38,
+          "wins": 5,
+          "losses": 33
+        },
+        "2026-05": {
+          "pnl": 3.4,
+          "commission": 0.0,
+          "swap": -1.04,
+          "net_pnl": 2.36,
+          "trades": 63,
+          "wins": 30,
+          "losses": 33
+        },
+        "2026-06": {
+          "pnl": -31.91,
+          "commission": 0.0,
+          "swap": 0.0,
+          "net_pnl": -31.91,
+          "trades": 16,
+          "wins": 2,
+          "losses": 14
+        },
+        "2026-07": {
+          "pnl": -17.52,
+          "commission": 0.0,
+          "swap": 0.0,
+          "net_pnl": -17.52,
+          "trades": 48,
+          "wins": 20,
+          "losses": 28
+        }
+      },
+      "error": null
+    },
+    "DerivBVI": {
+      "login": "21419903",
+      "server": "DerivBVI-Server",
+      "balance": 0.0,
+      "equity": 0.0,
+      "updated_at": "2026-07-18T18:54:20",
+      "months": {
+        "2026-02": {
+          "pnl": 10.0,
+          "commission": 0.0,
+          "swap": -1.44,
+          "net_pnl": 8.56,
+          "trades": 33,
+          "wins": 17,
+          "losses": 16
+        },
+        "2026-03": {
+          "pnl": -0.6,
+          "commission": 0.0,
+          "swap": 0.0,
+          "net_pnl": -0.6,
+          "trades": 1,
+          "wins": 0,
+          "losses": 1
+        },
+        "2026-04": {
+          "pnl": -4.88,
+          "commission": 0.0,
+          "swap": 0.0,
+          "net_pnl": -4.88,
+          "trades": 4,
+          "wins": 0,
+          "losses": 4
+        },
+        "2026-05": {
+          "pnl": 18.01,
+          "commission": 0.0,
+          "swap": -0.35,
+          "net_pnl": 17.66,
+          "trades": 79,
+          "wins": 39,
+          "losses": 40
+        },
+        "2026-06": {
+          "pnl": -14.42,
+          "commission": 0.0,
+          "swap": -0.19,
+          "net_pnl": -14.61,
+          "trades": 132,
+          "wins": 69,
+          "losses": 63
+        }
+      },
+      "error": null
+    },
+    "Zero Spread": {
+      "login": "80435161",
+      "server": "DerivBVI-Server-02",
+      "balance": 0.08,
+      "equity": 0.08,
+      "updated_at": "2026-07-18T18:59:27",
+      "months": {
+        "2026-02": {
+          "pnl": 8.57,
+          "commission": -0.84,
+          "swap": -0.44,
+          "net_pnl": 7.29,
+          "trades": 50,
+          "wins": 27,
+          "losses": 23
+        },
+        "2026-03": {
+          "pnl": 1.14,
+          "commission": -0.01,
+          "swap": -0.02,
+          "net_pnl": 1.11,
+          "trades": 1,
+          "wins": 1,
+          "losses": 0
+        },
+        "2026-04": {
+          "pnl": -5.41,
+          "commission": -0.13,
+          "swap": 0.0,
+          "net_pnl": -5.54,
+          "trades": 6,
+          "wins": 1,
+          "losses": 5
+        },
+        "2026-05": {
+          "pnl": -7.27,
+          "commission": -0.65,
+          "swap": -0.14,
+          "net_pnl": -8.06,
+          "trades": 45,
+          "wins": 23,
+          "losses": 21
+        },
+        "2026-06": {
+          "pnl": -8.21,
+          "commission": -3.31,
+          "swap": -0.1,
+          "net_pnl": -11.62,
+          "trades": 58,
+          "wins": 38,
+          "losses": 20
+        }
+      },
+      "error": null
+    },
+    "Weltrade": {
+      "login": "34083957",
+      "server": "Weltrade-Real",
+      "balance": 0.65,
+      "equity": 0.65,
+      "updated_at": "2026-07-18T19:10:46",
+      "months": {
+        "2025-03": {
+          "pnl": -16.96,
+          "commission": 0.0,
+          "swap": 0.0,
+          "net_pnl": -16.96,
+          "trades": 32,
+          "wins": 12,
+          "losses": 20
+        },
+        "2025-04": {
+          "pnl": -25.0,
+          "commission": 0.0,
+          "swap": 0.0,
+          "net_pnl": -25.0,
+          "trades": 143,
+          "wins": 50,
+          "losses": 93
+        },
+        "2025-05": {
+          "pnl": -23.6,
+          "commission": 0.0,
+          "swap": -0.02,
+          "net_pnl": -23.62,
+          "trades": 23,
+          "wins": 7,
+          "losses": 16
+        },
+        "2025-06": {
+          "pnl": -12.12,
+          "commission": 0.0,
+          "swap": -0.26,
+          "net_pnl": -12.38,
+          "trades": 18,
+          "wins": 8,
+          "losses": 10
+        },
+        "2025-10": {
+          "pnl": 1.32,
+          "commission": 0.0,
+          "swap": 0.0,
+          "net_pnl": 1.32,
+          "trades": 1,
+          "wins": 1,
+          "losses": 0
+        },
+        "2025-11": {
+          "pnl": 66.74,
+          "commission": 0.0,
+          "swap": -0.76,
+          "net_pnl": 65.98,
+          "trades": 105,
+          "wins": 60,
+          "losses": 44
+        },
+        "2025-12": {
+          "pnl": 13.53,
+          "commission": 0.0,
+          "swap": -0.51,
+          "net_pnl": 13.02,
+          "trades": 74,
+          "wins": 43,
+          "losses": 31
+        },
+        "2026-01": {
+          "pnl": -16.48,
+          "commission": 0.0,
+          "swap": -0.03,
+          "net_pnl": -16.51,
+          "trades": 77,
+          "wins": 34,
+          "losses": 43
+        },
+        "2026-02": {
+          "pnl": 16.38,
+          "commission": 0.0,
+          "swap": -0.82,
+          "net_pnl": 15.56,
+          "trades": 47,
+          "wins": 25,
+          "losses": 22
+        },
+        "2026-03": {
+          "pnl": -6.15,
+          "commission": 0.0,
+          "swap": -0.25,
+          "net_pnl": -6.4,
+          "trades": 70,
+          "wins": 38,
+          "losses": 32
+        },
+        "2026-04": {
+          "pnl": -76.46,
+          "commission": 0.0,
+          "swap": -0.66,
+          "net_pnl": -77.12,
+          "trades": 133,
+          "wins": 71,
+          "losses": 62
+        },
+        "2026-05": {
+          "pnl": -16.23,
+          "commission": 0.0,
+          "swap": -0.18,
+          "net_pnl": -16.41,
+          "trades": 81,
+          "wins": 41,
+          "losses": 40
+        },
+        "2026-06": {
+          "pnl": -12.37,
+          "commission": 0.0,
+          "swap": 0.0,
+          "net_pnl": -12.37,
+          "trades": 77,
+          "wins": 43,
+          "losses": 34
+        },
+        "2026-07": {
+          "pnl": -15.9,
+          "commission": 0.0,
+          "swap": -0.45,
+          "net_pnl": -16.35,
+          "trades": 39,
+          "wins": 15,
+          "losses": 22
+        }
+      },
+      "error": null
+    }
+  }
+}

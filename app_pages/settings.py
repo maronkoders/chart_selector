@@ -38,6 +38,7 @@ from core.volatile_store import (
     option_labels,
     upsert_option,
 )
+from core.page_load_monitor import page_bootstrap
 
 
 def _assets_for_volatile_assignment(cfg: dict) -> list[str]:
@@ -91,7 +92,9 @@ def _assets_for_volatile_assignment(cfg: dict) -> list[str]:
 
 st.title("⚙️ Settings")
 
-cfg = st.session_state.setdefault("app_config", load_config())
+with page_bootstrap("Settings", "Loading settings…") as boot:
+    cfg = st.session_state.setdefault("app_config", load_config())
+    boot.detail = f"profiles={len(cfg.get('profiles') or {})}"
 
 st.info(
     "Broker credentials are stored **locally in plain text** in `broker_config.json` "
@@ -186,6 +189,24 @@ with tab1:
         
         if selected_profile != "None (use already-logged-in terminal)" and selected_profile != active_name:
             set_active_profile(cfg, selected_profile)
+            cfg = load_config()
+            st.session_state.app_config = cfg
+            ok, msg = mt5_client.ensure_connection(cfg, force=True)
+            if ok:
+                _, profile = get_active_profile(cfg)
+                universe = get_profile_universe(selected_profile, profile)
+                with st.spinner("Syncing Market Watch + opening charts with new_me indicators..."):
+                    result = mt5_client.sync_universe_to_market_watch_and_charts(universe)
+                charts = result.get("charts") or {}
+                if charts.get("ok"):
+                    st.toast(
+                        f"Charts ready: opened {charts.get('opened', 0)}, "
+                        f"updated {charts.get('updated', 0)}."
+                    )
+                elif charts.get("error"):
+                    st.warning(charts["error"])
+            else:
+                st.error(msg)
             st.rerun()
         elif selected_profile == "None (use already-logged-in terminal)" and active_name is not None:
             set_active_profile(cfg, None)
@@ -240,6 +261,19 @@ with tab1:
                 with c4:
                     if st.button("🟢 Set Active", key=f"activate_{name}", disabled=name == active_name, use_container_width=True):
                         set_active_profile(cfg, name)
+                        cfg = load_config()
+                        st.session_state.app_config = cfg
+                        ok, msg = mt5_client.ensure_connection(cfg, force=True)
+                        if ok:
+                            _, profile = get_active_profile(cfg)
+                            universe = get_profile_universe(name, profile)
+                            with st.spinner("Syncing Market Watch + charts..."):
+                                result = mt5_client.sync_universe_to_market_watch_and_charts(universe)
+                            charts = result.get("charts") or {}
+                            if charts.get("error") and not charts.get("ok"):
+                                st.warning(charts["error"])
+                        else:
+                            st.error(msg)
                         st.rerun()
                 with c5:
                     if st.button("🗑️ Delete", key=f"delete_{name}", use_container_width=True):
@@ -377,12 +411,14 @@ with tab2:
                 st.rerun()
 
             st.divider()
-            st.markdown("**MT5 Market Watch**")
+            st.markdown("**MT5 Market Watch + Charts**")
             st.caption(
-                "Adds symbols for enabled classes to Market Watch, and removes "
-                "symbols for disabled classes that belong to this broker universe."
+                "Resets Market Watch to enabled classes, closes all open charts, then "
+                "opens every watchlist symbol on M1 with `new_me` + `exporter`. "
+                "Requires ChartSelectorLoader on any one chart "
+                "(Navigator > Expert Advisors > new_me)."
             )
-            if st.button("📡 Sync selected classes to Market Watch", width="stretch"):
+            if st.button("📡 Sync Market Watch + open charts with indicators", width="stretch"):
                 ok, msg = mt5_client.ensure_connection(cfg, force=True)
                 if not ok:
                     st.error(msg)
@@ -392,13 +428,23 @@ with tab2:
                     st.session_state.app_config = cfg
                     _, profile = get_active_profile(cfg)
                     universe = get_profile_universe(profile_name, profile)
-                    with st.spinner("Updating MT5 Market Watch..."):
-                        result = mt5_client.sync_universe_to_market_watch(universe)
+                    with st.spinner("Updating MT5 Market Watch and charts..."):
+                        result = mt5_client.sync_universe_to_market_watch_and_charts(universe)
                     st.success(
                         f"Market Watch reset to {len(result.get('desired') or [])} symbol(s) · "
                         f"added {len(result['added'])} · removed {len(result['removed'])} · "
                         f"classes: {', '.join(result['enabled_classes']) or 'none'}"
                     )
+                    charts = result.get("charts") or {}
+                    if charts.get("ok"):
+                        st.info(
+                            f"Charts: opened {charts.get('opened', 0)}, "
+                            f"updated {charts.get('updated', 0)}, "
+                            f"closed {charts.get('closed', 0)}, "
+                            f"skipped {charts.get('skipped', 0)}."
+                        )
+                    elif charts.get("error"):
+                        st.warning(charts["error"])
                     if result["skipped"]:
                         st.warning(
                             f"Could not select {len(result['skipped'])} symbol(s): "

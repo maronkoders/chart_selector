@@ -5,7 +5,7 @@
         {
           "label": "not",
           "operator": "<=",
-          "scale": 20.0
+          "scale": 10.0
         },
         {
           "label": "tiny",
@@ -21,6 +21,11 @@
           "label": "very",
           "operator": ">",
           "scale": 640.0
+        },
+        {
+          "label": "simply",
+          "operator": "<=",
+          "scale": 20.0
         }
       ],
       "ratings": {
@@ -32,10 +37,20 @@
         "Boom 1000 Index": "not",
         "Volatility 250 (1s) Index": "not",
         "FX Vol 40": "in-between",
-        "FX Vol 20": "not",
+        "FX Vol 20": "simply",
         "FX Vol 60": "tiny",
         "FX Vol 80": "tiny",
-        "FX Vol 99": "very"
+        "FX Vol 99": "very",
+        "SFX Vol 20": "simply",
+        "SFX Vol 40": "tiny",
+        "SFX Vol 60": "tiny",
+        "SFX Vol 80": "in-between",
+        "SFX Vol 99": "not",
+        "FlipX 1": "not",
+        "FlipX 2": "not",
+        "FlipX 3": "not",
+        "FlipX 4": "not",
+        "FlipX 5": "not"
       }
     },
     "Main": {
@@ -81,7 +96,27 @@
         "Step Index 200": "tiny",
         "Step Index 300": "in-between",
         "Step Index 400": "very",
-        "Step Index 500": "very"
+        "Step Index 500": "very",
+        "Volatility 150 (1s) Index": "not",
+        "Volatility 250 (1s) Index": "not",
+        "Volatility 100 (1s) Index": "very",
+        "Volatility 90 (1s) Index": "very",
+        "Volatility 30 (1s) Index": "tiny",
+        "Volatility 10 (1s) Index": "tiny",
+        "Volatility 5 (1s) Index": "tiny",
+        "Volatility 50 (1s) Index": "in-between",
+        "Volatility 75 (1s) Index": "tiny",
+        "Volatility 100 Index": "very",
+        "Volatility 15 (1s) Index": "in-between",
+        "Volatility 90 Index": "very",
+        "Volatility 10 Index": "tiny",
+        "Volatility 15 Index": "very",
+        "Volatility 25 (1s) Index": "very",
+        "Volatility 25 Index": "tiny",
+        "Volatility 30 Index": "very",
+        "Volatility 5 Index": "tiny",
+        "Volatility 50 Index": "tiny",
+        "Volatility 75 Index": "tiny"
       }
     }
   }

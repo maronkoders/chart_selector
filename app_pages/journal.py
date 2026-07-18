@@ -12,6 +12,7 @@ from core.journal_store import (
     encode_uploaded_image,
     decode_image_bytes,
 )
+from core.page_load_monitor import page_bootstrap
 
 IMAGE_TYPES = ["png", "jpg", "jpeg", "gif", "webp"]
 
@@ -64,37 +65,42 @@ with col_empty:
 trades = []
 mt5_error = None
 
-try:
-    ok, msg = mt5_client.ensure_connection(cfg)
-    if ok:
-        from_date = dt.datetime.combine(week_start, dt.time.min)
-        to_date = dt.datetime.combine(week_end, dt.time.max)
-        deals_df = mt5_client.get_history_deals_df(from_date, to_date)
-        if not deals_df.empty:
-            closing_deals = deals_df[deals_df["Entry"] == 1]
-            if not closing_deals.empty:
-                for _, row in closing_deals.iterrows():
-                    ticket = int(row["Ticket"])
-                    description = get_entry_description(ticket)
-                    trades.append({
-                        "mt5_ticket": ticket,
-                        "date": row["Time"].strftime("%Y-%m-%d %H:%M"),
-                        "asset": row["Symbol"],
-                        "direction": row["Type"],
-                        "lots": float(row["Volume"]),
-                        "entry_price": float(row["Price"]),
-                        "pnl": float(row["Profit"]),
-                        "notes": description["notes"],
-                        "images": description["images"],
-                    })
+with page_bootstrap("Journal", "Loading week trades from MT5…") as boot:
+    try:
+        ok, msg = mt5_client.ensure_connection(cfg)
+        boot.ok = ok
+        boot.detail = msg
+        if ok:
+            from_date = dt.datetime.combine(week_start, dt.time.min)
+            to_date = dt.datetime.combine(week_end, dt.time.max)
+            deals_df = mt5_client.get_history_deals_df(from_date, to_date)
+            if not deals_df.empty:
+                closing_deals = deals_df[deals_df["Entry"] == 1]
+                if not closing_deals.empty:
+                    for _, row in closing_deals.iterrows():
+                        ticket = int(row["Ticket"])
+                        description = get_entry_description(ticket)
+                        trades.append({
+                            "mt5_ticket": ticket,
+                            "date": row["Time"].strftime("%Y-%m-%d %H:%M"),
+                            "asset": row["Symbol"],
+                            "direction": row["Type"],
+                            "lots": float(row["Volume"]),
+                            "entry_price": float(row["Price"]),
+                            "pnl": float(row["Profit"]),
+                            "notes": description["notes"],
+                            "images": description["images"],
+                        })
+                else:
+                    mt5_error = "No closing deals found for this week."
             else:
-                mt5_error = "No closing deals found for this week."
+                mt5_error = "No trade history found in MT5 for the selected week."
         else:
-            mt5_error = "No trade history found in MT5 for the selected week."
-    else:
-        mt5_error = f"MT5 connection failed: {msg}"
-except Exception as e:
-    mt5_error = f"Could not fetch live MT5 data: {e}"
+            mt5_error = f"MT5 connection failed: {msg}"
+    except Exception as e:
+        mt5_error = f"Could not fetch live MT5 data: {e}"
+        boot.ok = False
+        boot.detail = mt5_error
 
 with st.sidebar:
     st.header("Status")

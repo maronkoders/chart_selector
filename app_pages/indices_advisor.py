@@ -31,6 +31,7 @@ from core.volatile_store import (
     option_labels,
     volatile_labels_for_account,
 )
+from core.page_load_monitor import page_bootstrap
 
 BIAS_ARROW = {
     "BUY": "↑",
@@ -138,16 +139,28 @@ def render_sidebar_hidden_assets(hidden_assets: set[str]) -> None:
 
 cfg = st.session_state.setdefault("app_config", load_config())
 
-# 1. CONNECT TO MT5 first — Account Balance below is read live from this connection.
-ok, msg = mt5_client.ensure_connection(cfg)
+# 1. CONNECT + Market Watch while UI is locked (cached scan stays in session_state).
+with page_bootstrap("Indices Advisor", "Connecting and syncing Market Watch…") as boot:
+    ok, msg = mt5_client.ensure_connection(cfg)
+    boot.ok = ok
+    boot.detail = msg
+    if ok:
+        profile_name, profile = get_active_profile(cfg)
+        universe = get_profile_universe(profile_name, profile)
+        account_info = mt5_client.get_account_info()
+        mw_result = mt5_client.sync_universe_to_market_watch(universe)
+    else:
+        profile_name, profile = get_active_profile(cfg)
+        universe = get_profile_universe(profile_name, profile)
+        account_info = None
+        mw_result = {"removed": [], "desired": []}
+
 if not ok:
     st.error(msg)
     st.page_link("app_pages/settings.py", label="Configure broker login in Settings →", icon="⚙️")
     st.stop()
 
-profile_name, profile = get_active_profile(cfg)
 broker_type = get_profile_broker_type(profile_name, profile)
-universe = get_profile_universe(profile_name, profile)
 features = get_profile_features(profile)
 st.title(advisor_title(broker_type))
 if profile_name:
@@ -156,7 +169,6 @@ if profile_name:
 # 2. SIDEBAR RISK INPUTS (persisted to broker_config.json so Dashboard/Settings stay in sync)
 st.sidebar.header("Account Parameters")
 
-account_info = mt5_client.get_account_info()
 if account_info:
     account_size = float(account_info["balance"])
 else:
@@ -178,8 +190,7 @@ if account_size != cfg["risk"]["account_size"] or risk_percentage != cfg["risk"]
 max_risk_cash = account_size * (risk_percentage / 100.0)
 st.sidebar.metric(label="Max Cash at Risk", value=f"${max_risk_cash:,.2f}")
 
-# Keep Market Watch = exactly the allowed synthetics (strips forex/stocks/banned).
-mw_result = mt5_client.sync_universe_to_market_watch(universe)
+# Market Watch only — never open/close MT5 charts from this page.
 if mw_result.get("removed"):
     st.toast(
         f"Market Watch cleaned: removed {len(mw_result['removed'])}, "
