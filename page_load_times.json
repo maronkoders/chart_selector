@@ -611,17 +611,80 @@
       "elapsed_sec": 0.021,
       "ok": true,
       "detail": "Connected as profile 'Weltrade' (login 34083957)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-21T20:14:17",
+      "finished_at": "2026-07-21T20:14:18",
+      "elapsed_ms": 209.6,
+      "elapsed_sec": 0.21,
+      "ok": true,
+      "detail": "Connected as profile 'Weltrade' (login 34083957)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-21T20:14:19",
+      "finished_at": "2026-07-21T20:14:19",
+      "elapsed_ms": 19.3,
+      "elapsed_sec": 0.019,
+      "ok": true,
+      "detail": "Connected as profile 'Weltrade' (login 34083957)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-21T20:14:24",
+      "finished_at": "2026-07-21T20:14:24",
+      "elapsed_ms": 10.1,
+      "elapsed_sec": 0.01,
+      "ok": true,
+      "detail": "Connected as profile 'Weltrade' (login 34083957)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-21T20:14:25",
+      "finished_at": "2026-07-21T20:14:25",
+      "elapsed_ms": 7.7,
+      "elapsed_sec": 0.008,
+      "ok": true,
+      "detail": "Connected as profile 'Weltrade' (login 34083957)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-21T20:31:20",
+      "finished_at": "2026-07-21T20:31:20",
+      "elapsed_ms": 217.5,
+      "elapsed_sec": 0.217,
+      "ok": true,
+      "detail": "Connected as profile 'Weltrade' (login 34083957)."
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-21T20:31:31",
+      "finished_at": "2026-07-21T20:31:31",
+      "elapsed_ms": 4.2,
+      "elapsed_sec": 0.004,
+      "ok": true,
+      "detail": "profiles=7"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-21T20:31:52",
+      "finished_at": "2026-07-21T20:31:52",
+      "elapsed_ms": 3.0,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=7"
     }
   ],
   "summary": {
     "Indices Advisor": {
-      "count": 30,
-      "total_ms": 36608.434299912464,
-      "avg_ms": 1220.3,
-      "last_ms": 20.6,
+      "count": 35,
+      "total_ms": 37072.46629991596,
+      "avg_ms": 1059.2,
+      "last_ms": 217.5,
       "min_ms": 4.3,
       "max_ms": 14687.7,
-      "last_at": "2026-07-21T15:39:40"
+      "last_at": "2026-07-21T20:31:20"
     },
     "Dashboard": {
       "count": 23,
@@ -642,14 +705,14 @@
       "last_at": "2026-07-20T19:53:23"
     },
     "Settings": {
-      "count": 12,
-      "total_ms": 66.63439997203113,
-      "avg_ms": 5.6,
-      "last_ms": 3.2,
+      "count": 14,
+      "total_ms": 73.81699997051783,
+      "avg_ms": 5.3,
+      "last_ms": 3.0,
       "min_ms": 2.1,
       "max_ms": 23.6,
-      "last_at": "2026-07-21T14:33:56"
+      "last_at": "2026-07-21T20:31:52"
     }
   },
-  "updated_at": "2026-07-21T15:39:40"
+  "updated_at": "2026-07-21T20:31:52"
 }

@@ -16,6 +16,7 @@ from core.config import (
     unlink_plan_from_profile,
     set_screenshot_folder,
     set_enabled_index_classes,
+    set_telegram_settings,
     get_active_profile,
 )
 from core.broker_universe import (
@@ -39,6 +40,7 @@ from core.volatile_store import (
     upsert_option,
 )
 from core.page_load_monitor import page_bootstrap
+from core.telegram_notifier import format_watchlist_message, get_telegram_settings, send_telegram_message
 
 
 def _assets_for_volatile_assignment(cfg: dict) -> list[str]:
@@ -160,8 +162,8 @@ if "screenshot_folder_selected" not in st.session_state:
     st.session_state.screenshot_folder_selected = None
 
 # Secondary navigation tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["Broker Profiles", "Index Classes", "Risk Parameters", "Screenshot Folder", "Volatile"]
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+    ["Broker Profiles", "Index Classes", "Risk Parameters", "Screenshot Folder", "Volatile", "Telegram"]
 )
 
 # Tab 1: Broker Profiles
@@ -747,3 +749,72 @@ with tab5:
                 apply_volatile_edits(payload, profile_name=profile_name)
                 st.success(f"Saved \\volatile for {len(payload)} asset(s).")
                 st.rerun()
+
+# Tab 6: Telegram notifications
+with tab6:
+    st.subheader("Telegram notifications")
+    st.caption(
+        "When enabled, the Dashboard sends a Telegram message for the active profile "
+        "whenever the auto-refreshed watchlist has assets. Messages include asset name, "
+        "bias, min lot, and min margin."
+    )
+
+    tg = get_telegram_settings(cfg)
+    enabled = st.checkbox("Enable Telegram notifications", value=tg["enabled"])
+    bot_token = st.text_input(
+        "Bot token",
+        value=tg["bot_token"],
+        type="password",
+        help="Create a bot with @BotFather and paste the token here.",
+    )
+    chat_id = st.text_input(
+        "Chat ID",
+        value=tg["chat_id"],
+        help="Your user/chat id from @userinfobot or @getidsbot.",
+    )
+    refresh_minutes = st.number_input(
+        "Dashboard auto-refresh interval (minutes)",
+        min_value=1,
+        max_value=120,
+        value=int(tg["refresh_interval_minutes"]),
+    )
+    notify_unchanged = st.checkbox(
+        "Notify even when watchlist is unchanged",
+        value=tg["notify_on_unchanged"],
+        help="Off by default — a new message is sent only when assets or bias change.",
+    )
+
+    save_col, test_col = st.columns(2)
+    with save_col:
+        if st.button("💾 Save Telegram settings", width="stretch"):
+            set_telegram_settings(
+                cfg,
+                enabled=enabled,
+                bot_token=bot_token,
+                chat_id=chat_id,
+                refresh_interval_minutes=int(refresh_minutes),
+                notify_on_unchanged=notify_unchanged,
+            )
+            st.success("Telegram settings saved.")
+            st.rerun()
+    with test_col:
+        if st.button("📨 Send test message", width="stretch"):
+            sample = [
+                {
+                    "Asset": "Volatility 10 Index",
+                    "Bias": "BUY",
+                    "Min Lot": 0.35,
+                    "Min-Margin ($)": 0.12,
+                }
+            ]
+            profile_name, _ = get_active_profile(cfg)
+            ok, detail = send_telegram_message(
+                bot_token.strip(),
+                chat_id.strip(),
+                format_watchlist_message(profile_name, sample),
+            )
+            if ok:
+                st.success("Test message sent.")
+            else:
+                st.error(detail)
+

@@ -20,6 +20,13 @@ DEFAULT_CONFIG = {
     },
     "trading_plans": {},
     "screenshot_folder": "",
+    "telegram": {
+        "enabled": False,
+        "bot_token": "",
+        "chat_id": "",
+        "refresh_interval_minutes": 10,
+        "notify_on_unchanged": False,
+    },
 }
 
 
@@ -36,6 +43,9 @@ def load_config() -> dict:
         merged.setdefault("risk", {})
         merged.setdefault("trading_plans", {})
         merged.setdefault("screenshot_folder", "")
+        merged.setdefault("telegram", {})
+        for key, value in DEFAULT_CONFIG["telegram"].items():
+            merged["telegram"].setdefault(key, value)
         for key, value in DEFAULT_CONFIG["risk"].items():
             merged["risk"].setdefault(key, value)
         return merged
@@ -193,6 +203,25 @@ def calculate_plan_progress(plan: dict, current_balance: float = None, trade_his
 
 def set_screenshot_folder(cfg: dict, folder_path: str) -> None:
     cfg["screenshot_folder"] = os.path.normpath(folder_path)
+    save_config(cfg)
+
+
+def set_telegram_settings(
+    cfg: dict,
+    *,
+    enabled: bool,
+    bot_token: str,
+    chat_id: str,
+    refresh_interval_minutes: int,
+    notify_on_unchanged: bool = False,
+) -> None:
+    cfg["telegram"] = {
+        "enabled": enabled,
+        "bot_token": bot_token.strip(),
+        "chat_id": chat_id.strip(),
+        "refresh_interval_minutes": max(1, int(refresh_interval_minutes)),
+        "notify_on_unchanged": notify_on_unchanged,
+    }
     save_config(cfg)
 
 

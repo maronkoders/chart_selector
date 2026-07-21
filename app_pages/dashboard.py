@@ -2,6 +2,8 @@ import datetime as dt
 import os
 import subprocess
 import sys
+import time
+from datetime import timedelta
 
 import pandas as pd
 import streamlit as st
@@ -12,6 +14,8 @@ from core.config import load_config, get_profile_plan, calculate_plan_progress, 
 from core.plan_frequency import build_week_targets_for_grid
 from core.hidden_assets_store import load_hidden_assets
 from core.page_load_monitor import page_bootstrap, recent_visits, summary_table_rows
+from core.telegram_notifier import get_telegram_settings, notify_watchlist
+from core.watchlist_refresh import build_watchlist_rows, refresh_bias_filter
 
 st.title("📊 Dashboard")
 
@@ -263,19 +267,123 @@ else:
 
 st.divider()
 
-st.subheader("Watchlist")
-asset_data = st.session_state.get("asset_data") or []
-active_name, _ = get_active_profile(cfg)
-hidden_assets = load_hidden_assets(active_name)
-watchlist = sorted(
-    {
-        row["Asset"]
-        for row in asset_data
-        if row.get("Suitable") == "🟢 Safe Size" and row.get("Asset") not in hidden_assets
+BIAS_ARROW = {"BUY": "↑", "SELL": "↓"}
+
+
+def _format_bias(direction: str | None) -> str:
+    if not direction:
+        return "—"
+    return BIAS_ARROW.get(direction, direction)
+
+
+def _run_watchlist_refresh(cfg: dict, profile_name: str | None, *, force_notify: bool = False) -> dict:
+    asset_data = st.session_state.get("asset_data") or []
+    if not asset_data:
+        return {
+            "ok": False,
+            "reason": "no_asset_data",
+            "rows": [],
+            "notify": {"reason": "no_asset_data"},
+        }
+
+    filter_result = refresh_bias_filter(asset_data, profile_name, persist_hidden=True)
+    st.session_state.hidden_assets = filter_result["hidden"]
+    st.session_state.hidden_assets_profile = profile_name
+    st.session_state.asset_directions = filter_result["directions"]
+
+    rows = build_watchlist_rows(asset_data, filter_result["hidden"], filter_result["directions"])
+    display_rows = [
+        {
+            **row,
+            "Bias": _format_bias(row.get("Bias")),
+        }
+        for row in rows
+    ]
+
+    notify_result = notify_watchlist(cfg, profile_name, rows, force=force_notify)
+    st.session_state["last_watchlist_refresh_ts"] = time.time()
+    st.session_state["last_watchlist_notify"] = notify_result
+
+    return {
+        "ok": True,
+        "rows": display_rows,
+        "filter_result": filter_result,
+        "notify": notify_result,
     }
-)
-if not watchlist:
-    st.info("No watchlist assets yet. Run Filter Assets on the Indices Advisor page.")
-else:
-    st.write(", ".join(watchlist))
+
+
+@st.fragment(run_every=timedelta(seconds=60))
+def watchlist_auto_panel(cfg: dict, profile_name: str | None, mt5_ok: bool) -> None:
+    tg = get_telegram_settings(cfg)
+    interval_sec = tg["refresh_interval_minutes"] * 60
+    last_ts = float(st.session_state.get("watchlist_last_auto_filter_ts") or 0)
+    now = time.time()
+    due = (now - last_ts) >= interval_sec
+
+    head_col, action_col = st.columns([4, 1])
+    with head_col:
+        st.subheader("Watchlist")
+        st.caption(
+            f"Auto-refreshes bias filter every {tg['refresh_interval_minutes']} minute(s) "
+            f"for `{profile_name or 'active profile'}`. "
+            "Telegram alerts fire when assets are found (Settings → Telegram)."
+        )
+    with action_col:
+        st.write("")
+        if st.button("🔄 Refresh now", width="stretch", key="watchlist_refresh_now"):
+            if not mt5_ok:
+                st.error("MT5 is not connected.")
+            else:
+                with st.spinner("Filtering assets…"):
+                    _run_watchlist_refresh(cfg, profile_name, force_notify=False)
+                st.session_state["watchlist_last_auto_filter_ts"] = time.time()
+                st.rerun(scope="app")
+
+    asset_data = st.session_state.get("asset_data") or []
+    if not asset_data:
+        st.info(
+            "No scanned assets yet. Open Indices Advisor once to scan symbols, "
+            "then return here for auto-filtering and Telegram alerts."
+        )
+        st.page_link("app_pages/indices_advisor.py", label="Open Indices Advisor →", icon="🎯")
+        return
+
+    if due and mt5_ok:
+        _run_watchlist_refresh(cfg, profile_name, force_notify=False)
+        st.session_state["watchlist_last_auto_filter_ts"] = now
+
+    hidden_assets = load_hidden_assets(profile_name)
+    directions = st.session_state.get("asset_directions") or {}
+    rows = build_watchlist_rows(asset_data, hidden_assets, directions)
+    display_rows = [
+        {**row, "Bias": _format_bias(row.get("Bias"))}
+        for row in rows
+    ]
+
+    last_refresh = st.session_state.get("last_watchlist_refresh_ts")
+    if last_refresh:
+        refreshed_at = dt.datetime.fromtimestamp(last_refresh).strftime("%H:%M:%S")
+        st.caption(f"Last filter refresh: {refreshed_at}")
+
+    notify = st.session_state.get("last_watchlist_notify") or {}
+    if notify.get("sent"):
+        st.success("Telegram watchlist message sent.")
+    elif notify.get("skipped") and notify.get("reason") == "unchanged":
+        st.caption("Telegram: watchlist unchanged since last alert.")
+    elif notify.get("reason") == "disabled":
+        st.caption("Telegram alerts are off (enable in Settings → Telegram).")
+    elif notify.get("error"):
+        st.warning(f"Telegram: {notify['error']}")
+
+    if not display_rows:
+        st.info("No watchlist assets after bias filtering. Hidden assets may be excluded.")
+        st.page_link("app_pages/indices_advisor.py", label="Manage watchlist in Indices Advisor →", icon="🎯")
+        return
+
+    df = pd.DataFrame(display_rows)[["Asset", "Bias", "Min Lot", "Min-Margin ($)"]]
+    st.dataframe(df, hide_index=True, width="stretch")
     st.page_link("app_pages/indices_advisor.py", label="Manage watchlist in Indices Advisor →", icon="🎯")
+
+
+active_name, _ = get_active_profile(cfg)
+watchlist_auto_panel(cfg, active_name, ok)

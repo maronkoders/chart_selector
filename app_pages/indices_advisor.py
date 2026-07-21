@@ -32,6 +32,7 @@ from core.volatile_store import (
     volatile_labels_for_account,
 )
 from core.page_load_monitor import page_bootstrap
+from core.watchlist_refresh import refresh_bias_filter
 
 BIAS_ARROW = {
     "BUY": "↑",
@@ -351,38 +352,21 @@ with filter_col:
             st.warning("Run the initial scan first so there is an asset list to filter.")
         else:
             with st.spinner("Re-reading MQL5 Files bias snapshots..."):
-                # Always re-read JSON from the connected terminal's Files folder.
-                # Margin is already handled by the Safe Size scan.
-                result = filter_assets_from_exports(
-                    asset_data,
-                    allow_live_mt5=True,
-                )
+                result = refresh_bias_filter(asset_data, profile_name, persist_hidden=True)
 
-            eligible = set(result.get("eligible_assets", []))
-            rejected = result.get("rejected_assets", [])
-            # Full rebuild (same as initial scan): eligible = watchlist,
-            # everything else in the scan = hidden. Avoids stale manual hides
-            # blocking assets that are aligned again (e.g. Jump 10).
-            next_hidden_assets = set()
-            for row in asset_data:
-                name = row.get("Asset")
-                if name and name not in eligible:
-                    next_hidden_assets.add(name)
+            eligible = result["eligible"]
+            rejected = result["rejected"]
+            next_hidden_assets = result["hidden"]
+            directions = result["directions"]
 
             st.session_state.hidden_assets = next_hidden_assets
             st.session_state.hidden_assets_profile = profile_name
-            save_hidden_assets(next_hidden_assets, profile_name)
 
-            directions = {
-                asset: direction
-                for asset, direction in result.get("directions", {}).items()
-                if asset in eligible
-            }
-            st.session_state.asset_directions = directions
             buy_count = sum(1 for d in directions.values() if d == "BUY")
             sell_count = sum(1 for d in directions.values() if d == "SELL")
             source = result.get("bias_source", "none")
             folder_label = result.get("export_folder") or "live MT5 only"
+            st.session_state.asset_directions = directions
             st.success(
                 f"One-directional bias ({source}): {len(eligible)} kept "
                 f"({buy_count} BUY · {sell_count} SELL) · "
