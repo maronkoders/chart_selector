@@ -72,19 +72,11 @@
         "indices_advisor": true,
         "bias_filter": true,
         "bias_source": "auto"
-      }
-    },
-    "Demo": {
-      "terminal_path": "",
-      "login": "6132229",
-      "password": "Hyf@s23@5",
-      "server": "Deriv-Demo",
-      "broker_type": "deriv_synthetics",
-      "features": {
-        "indices_advisor": true,
-        "bias_filter": true,
-        "bias_source": "auto"
-      }
+      },
+      "enabled_index_classes": [
+        "Volatility",
+        "Jump"
+      ]
     },
     "Weltrade": {
       "terminal_path": "",
@@ -105,7 +97,7 @@
       ]
     }
   },
-  "active_profile": "Main",
+  "active_profile": "Weltrade",
   "risk": {
     "account_size": 1.0,
     "risk_percentage": 50.1

@@ -343,10 +343,31 @@ def request_watchlist_charts(
 
 
 def sync_universe_to_market_watch_and_charts(universe: dict) -> dict:
-    """Sync Market Watch, then close all charts and open exactly that watchlist."""
+    """Sync Market Watch, then close all charts and open exactly that watchlist.
+
+    Symbols with open charts (e.g. leftover EURUSD tiles) often cannot be
+    deselected until those charts close. After a successful chart reset we
+    purge Market Watch a second time so forex/junk locked by charts is removed.
+    """
     mw = sync_universe_to_market_watch(universe)
-    charts = request_watchlist_charts(list(mw.get("desired") or []))
+    desired = list(mw.get("desired") or [])
+    charts = request_watchlist_charts(desired)
     mw["charts"] = charts
+
+    if charts.get("ok"):
+        # Charts no longer hold stray symbols — finish the exact-set purge.
+        mw2 = sync_universe_to_market_watch(universe)
+        removed = list(mw.get("removed") or [])
+        removed.extend(n for n in (mw2.get("removed") or []) if n not in removed)
+        added = list(mw.get("added") or [])
+        added.extend(n for n in (mw2.get("added") or []) if n not in added)
+        mw["removed"] = removed
+        mw["added"] = added
+        mw["desired"] = list(mw2.get("desired") or desired)
+        mw["skipped"] = list(mw2.get("skipped") or mw.get("skipped") or [])
+        mw["enabled_classes"] = mw2.get("enabled_classes") or mw.get("enabled_classes")
+        mw["charts"] = charts
+
     try:
         st.session_state.mt5_needs_chart_sync = False
     except Exception:
@@ -416,17 +437,23 @@ def run_full_system_sync(cfg: dict, *, force_reconnect: bool = True) -> dict:
     install = ensure_chart_loader_installed()
     loader = chart_loader_status()
     result["loader"] = {**loader, "install": install}
-    if not loader.get("alive"):
-        result["error"] = loader.get("error") or "ChartSelectorLoader is not running."
-        # Still sync Market Watch so symbols are correct even if charts can't open.
-        profile_name, profile = get_active_profile(cfg)
-        universe = get_profile_universe(profile_name, profile)
-        mw = sync_universe_to_market_watch(universe)
-        result["market_watch"] = mw
-        return result
 
     profile_name, profile = get_active_profile(cfg)
     universe = get_profile_universe(profile_name, profile)
+
+    if not loader.get("alive"):
+        result["error"] = loader.get("error") or "ChartSelectorLoader is not running."
+        # Still sync Market Watch and queue the chart reset so re-attaching the
+        # EA (with a pending request) opens synthetics instead of leftover forex.
+        mw = sync_universe_to_market_watch(universe)
+        charts = request_watchlist_charts(
+            list(mw.get("desired") or []),
+            wait_seconds=0.0,
+        )
+        result["market_watch"] = mw
+        result["charts"] = charts
+        return result
+
     mw = sync_universe_to_market_watch_and_charts(universe)
     result["market_watch"] = {
         "desired": len(mw.get("desired") or []),

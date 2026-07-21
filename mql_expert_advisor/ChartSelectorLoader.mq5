@@ -10,11 +10,12 @@
 //|    3. Drag it onto ANY one chart and leave it running             |
 //|                                                                   |
 //|  On start / on each Python request:                               |
-//|    close every other chart, then open all watchlist symbols.      |
+//|    close every other chart, then open the requested symbols       |
+//|    (or Market Watch if no request file is pending).               |
 //+------------------------------------------------------------------+
 #property copyright   "Infynite Solutions"
 #property version     "1.20"
-#property description "Closes open charts, then opens Market Watch charts with new_me"
+#property description "Closes open charts, then opens requested/Market Watch charts with new_me"
 #property strict
 
 #define REQUEST_FILE   "chart_selector\\open_charts.request"
@@ -290,13 +291,18 @@ void OnDeinit(const int reason)
 void OnTimer()
   {
    WriteHeartbeat();
-   // First timer fire after attach: close everything, open Market Watch charts.
+   // First timer fire after attach: prefer a pending Python request (exact
+   // symbol list) so leftover forex/etc in Market Watch is never opened.
+   // Fall back to Market Watch only when no request file is waiting.
    if(!g_startup_done)
      {
       g_startup_done = true;
       EventKillTimer();
       EventSetTimer(POLL_SECONDS);
-      StartupResetFromMarketWatch();
+      if(FileIsExist(REQUEST_FILE))
+         ProcessRequest();
+      else
+         StartupResetFromMarketWatch();
       return;
      }
    ProcessRequest();

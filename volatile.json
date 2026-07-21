@@ -50,7 +50,7 @@
         "FlipX 2": "not",
         "FlipX 3": "not",
         "FlipX 4": "not",
-        "FlipX 5": "not"
+        "FlipX 5": "tiny"
       }
     },
     "Main": {
@@ -91,7 +91,7 @@
         "Jump 100 Index": "not",
         "Jump 25 Index": "tiny",
         "Jump 50 Index": "in-between",
-        "Jump 75 Index": "not",
+        "Jump 75 Index": "tiny",
         "Step Index": "tiny",
         "Step Index 200": "tiny",
         "Step Index 300": "in-between",
