@@ -95,12 +95,18 @@
         "SFX Vol",
         "FlipX"
       ]
+    },
+    "Demoe": {
+      "terminal_path": "",
+      "login": "6132229",
+      "password": "Hyf@s23@5",
+      "server": "Deriv-Demo"
     }
   },
-  "active_profile": "Weltrade",
+  "active_profile": "DerivVU",
   "risk": {
-    "account_size": 1.0,
-    "risk_percentage": 50.1
+    "account_size": 9161.29,
+    "risk_percentage": 50.5
   },
   "trading_plans": {
     "$1 challenge": {

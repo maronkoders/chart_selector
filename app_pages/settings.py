@@ -210,6 +210,9 @@ with tab1:
             st.rerun()
         elif selected_profile == "None (use already-logged-in terminal)" and active_name is not None:
             set_active_profile(cfg, None)
+            cfg = load_config()
+            st.session_state.app_config = cfg
+            mt5_client.disconnect()
             st.rerun()
     
     st.divider()

@@ -27,31 +27,132 @@ _REPO_TEMPLATE = _REPO_ROOT / "mql_expert_advisor" / "templates" / CHART_TEMPLAT
 _REPO_LOADER_MQ5 = _REPO_ROOT / "mql_expert_advisor" / "ChartSelectorLoader.mq5"
 
 
+def _shutdown_mt5(pause_sec: float = 0.75) -> None:
+    """Drop the IPC link so the next initialize() does not reuse a stale login."""
+    try:
+        mt5.shutdown()
+    except Exception:
+        pass
+    if pause_sec > 0:
+        time.sleep(pause_sec)
+
+
+def _parse_login(login) -> int | None:
+    if login is None or login == "":
+        return None
+    try:
+        return int(login)
+    except (TypeError, ValueError):
+        return None
+
+
+def _connected_login() -> int | None:
+    info = mt5.account_info()
+    if info is None:
+        return None
+    try:
+        return int(info.login)
+    except (TypeError, ValueError):
+        return None
+
+
+def _login_to_account(login_int: int, password: str, server: str) -> tuple[bool, str]:
+    """Switch the already-initialized terminal onto the requested account."""
+    if not mt5.login(login_int, password=password, server=server):
+        return False, f"MT5 login failed: {mt5.last_error()}"
+    actual = _connected_login()
+    if actual != login_int:
+        return (
+            False,
+            f"MT5 login reported success but account is {actual}, expected {login_int}.",
+        )
+    return True, ""
+
+
 def connect_to_profile(profile_name: str | None, profile: dict | None) -> tuple[bool, str]:
-    """Initialize MT5 and log in using an explicit broker profile dict."""
+    """Initialize MT5 and log in using an explicit broker profile dict.
+
+    Always clears any previous Python↔terminal session first. Without that,
+    initialize() reuses the terminal's last account and can fail with
+    (-6, 'Terminal: Authorization failed') before the new credentials are applied.
+    """
     profile = profile or {}
-    terminal_path = profile.get("terminal_path") or None
-    login = profile.get("login")
-    password = profile.get("password")
-    server = profile.get("server")
+    terminal_path = (profile.get("terminal_path") or "").strip() or None
+    password = profile.get("password") or ""
+    server = (profile.get("server") or "").strip()
+    login_int = _parse_login(profile.get("login"))
+    if profile.get("login") not in (None, "") and login_int is None:
+        return False, "Broker profile login must be numeric. Check Settings."
 
-    init_kwargs = {}
-    if terminal_path:
-        init_kwargs["path"] = terminal_path
+    has_creds = login_int is not None and bool(password) and bool(server)
+    label = profile_name or (str(login_int) if login_int is not None else "terminal")
 
-    if not mt5.initialize(**init_kwargs):
-        return False, f"MT5 initialize failed: {mt5.last_error()}"
+    def _bare_init_kwargs() -> dict:
+        kwargs: dict = {"timeout": 60_000}
+        if terminal_path:
+            kwargs["path"] = terminal_path
+        return kwargs
 
-    if login and password and server:
-        try:
-            login_int = int(login)
-        except (TypeError, ValueError):
-            return False, "Broker profile login must be numeric. Check Settings."
-        if not mt5.login(login_int, password=password, server=server):
-            return False, f"MT5 login failed: {mt5.last_error()}"
-        label = profile_name or str(login_int)
+    def _cred_init_kwargs() -> dict:
+        return {
+            **_bare_init_kwargs(),
+            "login": login_int,
+            "password": password,
+            "server": server,
+        }
+
+    def _finish_ok() -> tuple[bool, str]:
         return True, f"Connected as profile '{label}' (login {login_int})."
 
+    def _ensure_expected_account() -> tuple[bool, str]:
+        actual = _connected_login()
+        if actual == login_int:
+            return True, ""
+        return _login_to_account(login_int, password, server)
+
+    # Wipe the old login trail before attaching to the (possibly different) account.
+    _shutdown_mt5()
+
+    if has_creds:
+        errors: list[str] = []
+
+        # 1) Authorize during initialize so MT5 never stays on the previous account.
+        if mt5.initialize(**_cred_init_kwargs()):
+            ok_login, err = _ensure_expected_account()
+            if ok_login:
+                return _finish_ok()
+            errors.append(err)
+            _shutdown_mt5(pause_sec=1.0)
+        else:
+            errors.append(f"initialize(creds): {mt5.last_error()}")
+            _shutdown_mt5(pause_sec=1.0)
+
+        # 2) Retry auth-in-init once after a longer clear (common after broker switches).
+        if mt5.initialize(**_cred_init_kwargs()):
+            ok_login, err = _ensure_expected_account()
+            if ok_login:
+                return _finish_ok()
+            errors.append(err)
+            _shutdown_mt5(pause_sec=1.0)
+        else:
+            errors.append(f"initialize(creds retry): {mt5.last_error()}")
+            _shutdown_mt5(pause_sec=1.0)
+
+        # 3) Last resort: attach to terminal, then switch account via login().
+        if mt5.initialize(**_bare_init_kwargs()):
+            ok_login, err = _login_to_account(login_int, password, server)
+            if ok_login:
+                return _finish_ok()
+            errors.append(err)
+            _shutdown_mt5(pause_sec=0.5)
+        else:
+            errors.append(f"initialize(bare): {mt5.last_error()}")
+            _shutdown_mt5(pause_sec=0.5)
+
+        return False, "MT5 broker switch failed: " + " | ".join(errors)
+
+    if not mt5.initialize(**_bare_init_kwargs()):
+        return False, f"MT5 initialize failed: {mt5.last_error()}"
     return True, "Connected to the already logged-in MT5 terminal (no stored credentials used)."
 
 
@@ -71,6 +172,13 @@ def ensure_connection(cfg: dict, force: bool = False) -> tuple[bool, str]:
     profile_changed = st.session_state.get("mt5_connected_profile") != active_profile_name
 
     if force or profile_changed or not st.session_state.get("mt5_connected"):
+        # Clear Streamlit connection flags up front so a failed switch cannot
+        # leave pages believing they are still on the previous broker login.
+        if force or profile_changed:
+            st.session_state.mt5_connected = False
+            st.session_state.mt5_connected_profile = None
+            st.session_state.mt5_status_message = "Reconnecting…"
+
         ok, msg = connect(cfg)
         st.session_state.mt5_connected = ok
         st.session_state.mt5_status_message = msg
@@ -80,11 +188,16 @@ def ensure_connection(cfg: dict, force: bool = False) -> tuple[bool, str]:
             # Chart open/close is NOT triggered here — only Dashboard/Settings sync does that.
             for key in (
                 "asset_data",
+                "asset_data_profile",
                 "asset_directions",
                 "hidden_assets",
                 "hidden_assets_profile",
                 "asset_page",
                 "asset_filter_key",
+                "asset_scan_last_run_at",
+                "asset_filter_last_run_at",
+                "asset_filter_last_trigger",
+                "last_system_sync",
             ):
                 st.session_state.pop(key, None)
             st.session_state.pop("mt5_needs_chart_sync", None)
@@ -109,7 +222,7 @@ def ensure_connection(cfg: dict, force: bool = False) -> tuple[bool, str]:
 
 
 def disconnect() -> None:
-    mt5.shutdown()
+    _shutdown_mt5(pause_sec=0.25)
     st.session_state.mt5_connected = False
     st.session_state.mt5_connected_profile = None
     st.session_state.mt5_status_message = "Disconnected."
@@ -509,6 +622,133 @@ def get_open_positions_df() -> pd.DataFrame:
         })
     return pd.DataFrame(rows)
 
+
+def get_open_positions_with_sl_df(max_risk_cash: float) -> pd.DataFrame:
+    """Open positions enriched with risk-based SL cash, points, and price.
+
+    *max_risk_cash* is split equally across positions so their SL Cash values
+    sum to the risk budget. Points use each symbol's tick value / tick size.
+    """
+    from core.sl_risk import build_position_sl_rows
+
+    positions = mt5.positions_get()
+    if not positions:
+        return pd.DataFrame()
+
+    raw: list[dict] = []
+    for p in positions:
+        info = mt5.symbol_info(p.symbol)
+        if info is None:
+            mt5.symbol_select(p.symbol, True)
+            info = mt5.symbol_info(p.symbol)
+
+        tick_value = float(getattr(info, "trade_tick_value", 0) or 0) if info else 0.0
+        tick_size = float(getattr(info, "trade_tick_size", 0) or 0) if info else 0.0
+        point = float(getattr(info, "point", 0) or 0) if info else 0.0
+        digits = int(getattr(info, "digits", 5) or 5) if info else 5
+
+        raw.append({
+            "Ticket": p.ticket,
+            "Symbol": p.symbol,
+            "Type": "Buy" if p.type == mt5.ORDER_TYPE_BUY else "Sell",
+            "Volume": p.volume,
+            "Open Price": p.price_open,
+            "Current Price": p.price_current,
+            "SL": p.sl,
+            "TP": p.tp,
+            "Profit": p.profit,
+            "Open Time": pd.to_datetime(p.time, unit="s"),
+            "tick_value": tick_value,
+            "tick_size": tick_size,
+            "point": point,
+            "digits": digits,
+        })
+
+    enriched = build_position_sl_rows(raw, float(max_risk_cash))
+    display_cols = [
+        "Ticket", "Symbol", "Type", "Volume", "Open Price", "Current Price",
+        "SL", "Suggested SL", "SL Points", "SL Cash", "TP", "Profit", "Open Time",
+    ]
+    df = pd.DataFrame(enriched)
+    return df[[c for c in display_cols if c in df.columns]]
+
+
+def modify_position_sltp(ticket: int, sl: float, tp: float | None = None, symbol: str | None = None) -> tuple[bool, str]:
+    """Set stop-loss (and optionally TP) on an open position via TRADE_ACTION_SLTP."""
+    positions = mt5.positions_get(ticket=ticket)
+    if not positions:
+        return False, f"Position #{ticket} not found."
+
+    pos = positions[0]
+    symbol = symbol or pos.symbol
+    info = mt5.symbol_info(symbol)
+    digits = int(getattr(info, "digits", 5) or 5) if info else 5
+
+    sl_price = round(float(sl), digits)
+    if tp is None:
+        tp_price = float(pos.tp or 0.0)
+    else:
+        tp_price = round(float(tp), digits)
+
+    request = {
+        "action": mt5.TRADE_ACTION_SLTP,
+        "position": int(ticket),
+        "symbol": symbol,
+        "sl": sl_price,
+        "tp": tp_price,
+    }
+    result = mt5.order_send(request)
+    if result is None:
+        return False, f"#{ticket}: order_send returned None ({mt5.last_error()})"
+
+    if result.retcode != mt5.TRADE_RETCODE_DONE:
+        comment = getattr(result, "comment", "") or ""
+        return False, f"#{ticket}: {result.retcode} {comment}".strip()
+
+    return True, f"#{ticket}: SL set to {sl_price}"
+
+
+def apply_suggested_sls(rows: list[dict] | pd.DataFrame) -> dict:
+    """Apply Suggested SL from each row onto the matching MT5 open position.
+
+    Keeps each position's existing TP. Returns {ok, failed, results}.
+    """
+    if isinstance(rows, pd.DataFrame):
+        records = rows.to_dict(orient="records")
+    else:
+        records = list(rows or [])
+
+    results: list[dict] = []
+    ok_count = 0
+    fail_count = 0
+
+    for row in records:
+        ticket = row.get("Ticket")
+        suggested = row.get("Suggested SL")
+        symbol = row.get("Symbol")
+        if ticket is None or suggested is None:
+            fail_count += 1
+            results.append({"ticket": ticket, "ok": False, "message": "Missing ticket or Suggested SL"})
+            continue
+        try:
+            sl_val = float(suggested)
+        except (TypeError, ValueError):
+            fail_count += 1
+            results.append({"ticket": ticket, "ok": False, "message": f"Invalid Suggested SL: {suggested}"})
+            continue
+        if sl_val <= 0:
+            fail_count += 1
+            results.append({"ticket": int(ticket), "ok": False, "message": "Suggested SL is zero / unset"})
+            continue
+
+        ok, msg = modify_position_sltp(int(ticket), sl_val, tp=None, symbol=symbol)
+        results.append({"ticket": int(ticket), "ok": ok, "message": msg, "sl": sl_val})
+        if ok:
+            ok_count += 1
+        else:
+            fail_count += 1
+
+    return {"ok": ok_count, "failed": fail_count, "results": results}
 
 def _deal_position_direction(d) -> str:
     """Returns the ORIGINAL position's direction (Buy/Sell) for a deal.

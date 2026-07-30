@@ -1,5 +1,7 @@
 import math
 import re
+import time
+import datetime as dt
 
 import streamlit as st
 import MetaTrader5 as mt5
@@ -37,6 +39,89 @@ BIAS_ARROW = {
     "BUY": "↑",
     "SELL": "↓",
 }
+
+FILTER_ASSETS_INTERVAL_SEC = 10 * 60
+
+
+def _format_relative_ago(epoch: float) -> str:
+    seconds = int(time.time() - epoch)
+    if seconds < 60:
+        return "just now"
+    minutes = seconds // 60
+    if minutes < 60:
+        label = "minute" if minutes == 1 else "minutes"
+        return f"{minutes} {label} ago"
+    hours = minutes // 60
+    label = "hour" if hours == 1 else "hours"
+    return f"{hours} {label} ago"
+
+
+def render_watchlist_refresh_banner() -> None:
+    scan_at = st.session_state.get("asset_scan_last_run_at")
+    if not scan_at:
+        st.info("**Last asset scan:** not yet scanned")
+        return
+    scan_time = dt.datetime.fromtimestamp(scan_at)
+    st.info(
+        f"**Last asset scan:** {_format_relative_ago(scan_at)} "
+        f"at {scan_time.strftime('%H:%M')}"
+    )
+
+
+def apply_bias_filter(
+    asset_data: list,
+    profile_name: str,
+    *,
+    trigger: str = "manual",
+) -> dict:
+    """Re-read MQL5 bias snapshots and rebuild hidden_assets / asset_directions."""
+    result = filter_assets_from_exports(asset_data, allow_live_mt5=True)
+    eligible = set(result.get("eligible_assets", []))
+    next_hidden_assets = set()
+    for row in asset_data:
+        name = row.get("Asset")
+        if name and name not in eligible:
+            next_hidden_assets.add(name)
+
+    now = time.time()
+    st.session_state.hidden_assets = next_hidden_assets
+    st.session_state.hidden_assets_profile = profile_name
+    save_hidden_assets(next_hidden_assets, profile_name)
+    st.session_state.asset_directions = {
+        asset: direction
+        for asset, direction in result.get("directions", {}).items()
+        if asset in eligible
+    }
+    st.session_state.asset_filter_last_run_at = now
+    st.session_state.asset_filter_last_trigger = trigger
+    # Keep the banner in sync for auto/manual filter as well as full scans.
+    st.session_state.asset_scan_last_run_at = now
+    st.session_state.asset_data_profile = profile_name
+    return result
+
+
+@st.fragment(run_every=FILTER_ASSETS_INTERVAL_SEC)
+def auto_refresh_bias_filter() -> None:
+    """Re-apply the bias filter every 10 minutes while this page is open."""
+    asset_data = st.session_state.get("asset_data")
+    if not asset_data:
+        return
+
+    cfg_local = st.session_state.get("app_config", load_config())
+    prof_name, prof = get_active_profile(cfg_local)
+    # Stale cache from a previous profile — wait for the full page rescan.
+    if st.session_state.get("asset_data_profile") not in (None, prof_name):
+        return
+    if not get_profile_features(prof).get("bias_filter", True):
+        return
+
+    last_run = float(st.session_state.get("asset_filter_last_run_at", 0))
+    if last_run and time.time() - last_run < FILTER_ASSETS_INTERVAL_SEC:
+        return
+
+    apply_bias_filter(asset_data, prof_name, trigger="auto")
+    st.toast(f"Watchlist auto-refreshed ({prof_name or 'active profile'}).")
+    st.rerun()
 
 
 def format_bias_arrow(direction: str | None) -> str:
@@ -198,7 +283,13 @@ if mw_result.get("removed"):
     )
 
 # 3. FETCH SYNTHETIC INDICES SPEC SHEETS
-if "asset_data" not in st.session_state:
+# Rescan whenever cache is missing or belongs to a different broker profile.
+cached_profile = st.session_state.get("asset_data_profile")
+needs_rescan = (
+    "asset_data" not in st.session_state
+    or cached_profile != profile_name
+)
+if needs_rescan:
     with st.status("Scanning synthetic indices...", expanded=True) as status:
         status.write(
             f"Market Watch set to {len(mw_result.get('desired') or [])} allowed "
@@ -267,23 +358,9 @@ if "asset_data" not in st.session_state:
             # Apply directional-bias hiding (exporter JSON and/or live MT5 EMA bias).
             if features.get("bias_filter", True):
                 status.write("Applying directional bias filter...")
-                bias_result = filter_assets_from_exports(asset_data, allow_live_mt5=True)
-                next_hidden = set()
+                bias_result = apply_bias_filter(asset_data, profile_name, trigger="scan")
                 eligible = set(bias_result.get("eligible_assets", []))
-                for row in asset_data:
-                    name = row.get("Asset")
-                    if not name:
-                        continue
-                    if name not in eligible:
-                        next_hidden.add(name)
-                st.session_state.hidden_assets = next_hidden
-                st.session_state.hidden_assets_profile = profile_name
-                save_hidden_assets(next_hidden, profile_name)
-                st.session_state.asset_directions = {
-                    asset: direction
-                    for asset, direction in bias_result.get("directions", {}).items()
-                    if asset in eligible
-                }
+                next_hidden = st.session_state.hidden_assets
                 source = bias_result.get("bias_source", "none")
                 status.write(
                     f"Bias filter ({source}) kept {len(eligible)} asset(s), "
@@ -297,8 +374,14 @@ if "asset_data" not in st.session_state:
             status.update(label="MT5 Initialization Complete, but no symbols found.", state="error", expanded=True)
 
     st.session_state.asset_data = asset_data
+    st.session_state.asset_data_profile = profile_name
+    st.session_state.asset_scan_last_run_at = time.time()
 else:
     asset_data = st.session_state.asset_data
+
+# Auto bias filter runs for every profile while this page stays open.
+if asset_data and features.get("bias_filter", True):
+    auto_refresh_bias_filter()
 
 # Convert to DataFrame for layout structuring
 df_assets = pd.DataFrame(asset_data)
@@ -312,7 +395,11 @@ hidden_assets = init_hidden_assets(profile_name)
 
 # 4. RENDER THE INTERFACE DISPLAY LAYOUT
 st.subheader("Watchlist")
-st.caption("Assets shown here are your active watchlist after bias filtering. Hide any you don't want.")
+render_watchlist_refresh_banner()
+st.caption(
+    "Assets shown here are your active watchlist after bias filtering. "
+    "Hide any you don't want."
+)
 
 sync_col, filter_col = st.columns(2, gap="small")
 with sync_col:
@@ -351,34 +438,11 @@ with filter_col:
             st.warning("Run the initial scan first so there is an asset list to filter.")
         else:
             with st.spinner("Re-reading MQL5 Files bias snapshots..."):
-                # Always re-read JSON from the connected terminal's Files folder.
-                # Margin is already handled by the Safe Size scan.
-                result = filter_assets_from_exports(
-                    asset_data,
-                    allow_live_mt5=True,
-                )
+                result = apply_bias_filter(asset_data, profile_name, trigger="manual")
 
             eligible = set(result.get("eligible_assets", []))
             rejected = result.get("rejected_assets", [])
-            # Full rebuild (same as initial scan): eligible = watchlist,
-            # everything else in the scan = hidden. Avoids stale manual hides
-            # blocking assets that are aligned again (e.g. Jump 10).
-            next_hidden_assets = set()
-            for row in asset_data:
-                name = row.get("Asset")
-                if name and name not in eligible:
-                    next_hidden_assets.add(name)
-
-            st.session_state.hidden_assets = next_hidden_assets
-            st.session_state.hidden_assets_profile = profile_name
-            save_hidden_assets(next_hidden_assets, profile_name)
-
-            directions = {
-                asset: direction
-                for asset, direction in result.get("directions", {}).items()
-                if asset in eligible
-            }
-            st.session_state.asset_directions = directions
+            directions = st.session_state.get("asset_directions", {})
             buy_count = sum(1 for d in directions.values() if d == "BUY")
             sell_count = sum(1 for d in directions.values() if d == "SELL")
             source = result.get("bias_source", "none")
@@ -449,7 +513,20 @@ if not df_assets.empty:
             label_visibility="collapsed",
         )
 
-    allowed_volatile = volatile_labels_for_account(account_size, volatile_options)
+    account_volatile = volatile_labels_for_account(account_size, volatile_options)
+    if account_volatile:
+        ceiling = max(
+            option["scale"]
+            for option in volatile_options
+            if option["label"] in account_volatile
+        )
+        allowed_volatile = {
+            option["label"]
+            for option in volatile_options
+            if option["scale"] <= ceiling
+        }
+    else:
+        allowed_volatile = set()
 
     df_filtered = df_scanner.copy()
     if selected_classes:

@@ -118,6 +118,67 @@
         "Volatility 50 Index": "tiny",
         "Volatility 75 Index": "tiny"
       }
+    },
+    "DerivVU": {
+      "options": [
+        {
+          "label": "not",
+          "operator": "<=",
+          "scale": 100.0
+        },
+        {
+          "label": "tiny",
+          "operator": "<=",
+          "scale": 300.0
+        },
+        {
+          "label": "in-between",
+          "operator": "<=",
+          "scale": 1000.0
+        },
+        {
+          "label": "very",
+          "operator": ">",
+          "scale": 1001.0
+        }
+      ],
+      "ratings": {
+        "Boom 1000 Index": "in-between",
+        "Boom 300 Index": "very",
+        "Boom 500 Index": "not",
+        "Boom 600 Index": "tiny",
+        "Boom 900 Index": "in-between",
+        "Jump 10 Index": "not",
+        "Jump 25 Index": "in-between",
+        "Jump 50 Index": "very",
+        "Jump 75 Index": "very",
+        "Jump 100 Index": "not",
+        "Step Index": "tiny",
+        "Step Index 200": "in-between",
+        "Step Index 300": "very",
+        "Step Index 400": "very",
+        "Step Index 500": "very",
+        "Volatility 5 Index": "not",
+        "Volatility 10 Index": "not",
+        "Volatility 15 Index": "tiny",
+        "Volatility 25 Index": "not",
+        "Volatility 30 Index": "very",
+        "Volatility 50 Index": "not",
+        "Volatility 75 Index": "tiny",
+        "Volatility 100 Index": "in-between",
+        "Volatility 90 Index": "very",
+        "Volatility 5 (1s) Index": "not",
+        "Volatility 10 (1s) Index": "tiny",
+        "Volatility 15 (1s) Index": "tiny",
+        "Volatility 25 (1s) Index": "very",
+        "Volatility 50 (1s) Index": "very",
+        "Volatility 90 (1s) Index": "very",
+        "Volatility 100 (1s) Index": "in-between",
+        "Volatility 75 (1s) Index": "in-between",
+        "Volatility 30 (1s) Index": "tiny",
+        "Volatility 250 (1s) Index": "not",
+        "Volatility 150 (1s) Index": "not"
+      }
     }
   }
 }

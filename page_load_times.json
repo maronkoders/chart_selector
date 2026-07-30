@@ -2,368 +2,1340 @@
   "visits": [
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T13:57:15",
-      "finished_at": "2026-07-20T13:57:19",
-      "elapsed_ms": 4692.1,
-      "elapsed_sec": 4.692,
+      "started_at": "2026-07-30T10:08:36",
+      "finished_at": "2026-07-30T10:08:36",
+      "elapsed_ms": 507.4,
+      "elapsed_sec": 0.507,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T13:57:39",
-      "finished_at": "2026-07-20T13:57:39",
-      "elapsed_ms": 373.0,
-      "elapsed_sec": 0.373,
+      "started_at": "2026-07-30T10:18:37",
+      "finished_at": "2026-07-30T10:18:38",
+      "elapsed_ms": 753.1,
+      "elapsed_sec": 0.753,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T14:30:36",
-      "finished_at": "2026-07-20T14:30:38",
-      "elapsed_ms": 1598.8,
-      "elapsed_sec": 1.599,
+      "started_at": "2026-07-30T10:36:42",
+      "finished_at": "2026-07-30T10:36:43",
+      "elapsed_ms": 761.1,
+      "elapsed_sec": 0.761,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T14:30:40",
-      "finished_at": "2026-07-20T14:30:40",
-      "elapsed_ms": 351.5,
-      "elapsed_sec": 0.351,
+      "started_at": "2026-07-30T10:46:43",
+      "finished_at": "2026-07-30T10:46:44",
+      "elapsed_ms": 215.6,
+      "elapsed_sec": 0.216,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T14:30:56",
-      "finished_at": "2026-07-20T14:30:58",
-      "elapsed_ms": 1234.6,
-      "elapsed_sec": 1.235,
+      "started_at": "2026-07-30T10:56:44",
+      "finished_at": "2026-07-30T10:56:44",
+      "elapsed_ms": 221.6,
+      "elapsed_sec": 0.222,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T14:43:18",
-      "finished_at": "2026-07-20T14:43:20",
-      "elapsed_ms": 1372.3,
-      "elapsed_sec": 1.372,
+      "started_at": "2026-07-30T11:06:44",
+      "finished_at": "2026-07-30T11:06:45",
+      "elapsed_ms": 226.6,
+      "elapsed_sec": 0.227,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T14:43:20",
-      "finished_at": "2026-07-20T14:43:21",
-      "elapsed_ms": 831.0,
-      "elapsed_sec": 0.831,
+      "started_at": "2026-07-30T11:16:45",
+      "finished_at": "2026-07-30T11:16:45",
+      "elapsed_ms": 391.2,
+      "elapsed_sec": 0.391,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T14:51:58",
-      "finished_at": "2026-07-20T14:51:59",
-      "elapsed_ms": 1017.1,
-      "elapsed_sec": 1.017,
+      "started_at": "2026-07-30T11:26:46",
+      "finished_at": "2026-07-30T11:26:47",
+      "elapsed_ms": 611.5,
+      "elapsed_sec": 0.611,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T14:51:59",
-      "finished_at": "2026-07-20T14:52:00",
-      "elapsed_ms": 466.9,
-      "elapsed_sec": 0.467,
+      "started_at": "2026-07-30T11:36:47",
+      "finished_at": "2026-07-30T11:36:48",
+      "elapsed_ms": 531.2,
+      "elapsed_sec": 0.531,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T14:58:53",
-      "finished_at": "2026-07-20T14:58:53",
-      "elapsed_ms": 680.2,
-      "elapsed_sec": 0.68,
+      "started_at": "2026-07-30T11:46:49",
+      "finished_at": "2026-07-30T11:46:51",
+      "elapsed_ms": 1982.8,
+      "elapsed_sec": 1.983,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T14:58:54",
-      "finished_at": "2026-07-20T14:58:54",
-      "elapsed_ms": 621.8,
-      "elapsed_sec": 0.622,
+      "started_at": "2026-07-30T11:56:53",
+      "finished_at": "2026-07-30T11:56:53",
+      "elapsed_ms": 376.4,
+      "elapsed_sec": 0.376,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T15:31:40",
-      "finished_at": "2026-07-20T15:31:40",
-      "elapsed_ms": 730.0,
-      "elapsed_sec": 0.73,
+      "started_at": "2026-07-30T12:02:20",
+      "finished_at": "2026-07-30T12:02:21",
+      "elapsed_ms": 786.4,
+      "elapsed_sec": 0.786,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T15:31:42",
-      "finished_at": "2026-07-20T15:31:42",
-      "elapsed_ms": 626.0,
-      "elapsed_sec": 0.626,
+      "started_at": "2026-07-30T12:06:27",
+      "finished_at": "2026-07-30T12:06:28",
+      "elapsed_ms": 1133.6,
+      "elapsed_sec": 1.134,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T15:34:45",
-      "finished_at": "2026-07-20T15:34:46",
-      "elapsed_ms": 879.5,
-      "elapsed_sec": 0.879,
+      "started_at": "2026-07-30T12:07:01",
+      "finished_at": "2026-07-30T12:07:02",
+      "elapsed_ms": 1117.0,
+      "elapsed_sec": 1.117,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T15:53:07",
-      "finished_at": "2026-07-20T15:53:08",
-      "elapsed_ms": 867.6,
-      "elapsed_sec": 0.868,
+      "started_at": "2026-07-30T12:17:03",
+      "finished_at": "2026-07-30T12:17:03",
+      "elapsed_ms": 354.4,
+      "elapsed_sec": 0.354,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T15:53:08",
-      "finished_at": "2026-07-20T15:53:09",
-      "elapsed_ms": 608.1,
-      "elapsed_sec": 0.608,
+      "started_at": "2026-07-30T12:21:02",
+      "finished_at": "2026-07-30T12:21:03",
+      "elapsed_ms": 1043.4,
+      "elapsed_sec": 1.043,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T12:31:04",
+      "finished_at": "2026-07-30T12:31:04",
+      "elapsed_ms": 357.7,
+      "elapsed_sec": 0.358,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T12:41:06",
+      "finished_at": "2026-07-30T12:41:06",
+      "elapsed_ms": 274.5,
+      "elapsed_sec": 0.275,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T12:51:07",
+      "finished_at": "2026-07-30T12:51:08",
+      "elapsed_ms": 447.6,
+      "elapsed_sec": 0.448,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T13:01:09",
+      "finished_at": "2026-07-30T13:01:09",
+      "elapsed_ms": 411.7,
+      "elapsed_sec": 0.412,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T13:11:11",
+      "finished_at": "2026-07-30T13:11:11",
+      "elapsed_ms": 268.8,
+      "elapsed_sec": 0.269,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T13:15:29",
+      "finished_at": "2026-07-30T13:15:31",
+      "elapsed_ms": 1361.1,
+      "elapsed_sec": 1.361,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T13:26:13",
+      "finished_at": "2026-07-30T13:26:13",
+      "elapsed_ms": 298.4,
+      "elapsed_sec": 0.298,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T13:36:14",
+      "finished_at": "2026-07-30T13:36:15",
+      "elapsed_ms": 550.1,
+      "elapsed_sec": 0.55,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T13:46:15",
+      "finished_at": "2026-07-30T13:46:16",
+      "elapsed_ms": 510.6,
+      "elapsed_sec": 0.511,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T13:56:16",
+      "finished_at": "2026-07-30T13:56:16",
+      "elapsed_ms": 344.6,
+      "elapsed_sec": 0.345,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T14:17:39",
+      "finished_at": "2026-07-30T14:17:41",
+      "elapsed_ms": 1775.9,
+      "elapsed_sec": 1.776,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T14:25:54",
+      "finished_at": "2026-07-30T14:25:56",
+      "elapsed_ms": 1298.9,
+      "elapsed_sec": 1.299,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T14:45:56",
+      "finished_at": "2026-07-30T14:45:56",
+      "elapsed_ms": 525.7,
+      "elapsed_sec": 0.526,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T15:05:06",
+      "finished_at": "2026-07-30T15:05:07",
+      "elapsed_ms": 386.6,
+      "elapsed_sec": 0.387,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T15:15:07",
+      "finished_at": "2026-07-30T15:15:08",
+      "elapsed_ms": 296.0,
+      "elapsed_sec": 0.296,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T15:25:08",
+      "finished_at": "2026-07-30T15:25:08",
+      "elapsed_ms": 247.1,
+      "elapsed_sec": 0.247,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T15:35:08",
+      "finished_at": "2026-07-30T15:35:09",
+      "elapsed_ms": 240.0,
+      "elapsed_sec": 0.24,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T15:45:09",
+      "finished_at": "2026-07-30T15:45:09",
+      "elapsed_ms": 245.0,
+      "elapsed_sec": 0.245,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T15:55:09",
+      "finished_at": "2026-07-30T15:55:10",
+      "elapsed_ms": 247.4,
+      "elapsed_sec": 0.247,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T16:05:10",
+      "finished_at": "2026-07-30T16:05:10",
+      "elapsed_ms": 233.0,
+      "elapsed_sec": 0.233,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T16:15:11",
+      "finished_at": "2026-07-30T16:15:11",
+      "elapsed_ms": 230.1,
+      "elapsed_sec": 0.23,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T16:25:11",
+      "finished_at": "2026-07-30T16:25:11",
+      "elapsed_ms": 231.3,
+      "elapsed_sec": 0.231,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T16:26:26",
+      "finished_at": "2026-07-30T16:26:26",
+      "elapsed_ms": 352.7,
+      "elapsed_sec": 0.353,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T16:36:27",
+      "finished_at": "2026-07-30T16:36:27",
+      "elapsed_ms": 275.1,
+      "elapsed_sec": 0.275,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T16:46:27",
+      "finished_at": "2026-07-30T16:46:28",
+      "elapsed_ms": 224.3,
+      "elapsed_sec": 0.224,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T16:56:28",
+      "finished_at": "2026-07-30T16:56:28",
+      "elapsed_ms": 283.9,
+      "elapsed_sec": 0.284,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T17:06:28",
+      "finished_at": "2026-07-30T17:06:29",
+      "elapsed_ms": 237.4,
+      "elapsed_sec": 0.237,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T17:16:29",
+      "finished_at": "2026-07-30T17:16:29",
+      "elapsed_ms": 293.3,
+      "elapsed_sec": 0.293,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T17:26:29",
+      "finished_at": "2026-07-30T17:26:30",
+      "elapsed_ms": 216.4,
+      "elapsed_sec": 0.216,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T17:36:30",
+      "finished_at": "2026-07-30T17:36:30",
+      "elapsed_ms": 312.2,
+      "elapsed_sec": 0.312,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T17:46:30",
+      "finished_at": "2026-07-30T17:46:31",
+      "elapsed_ms": 221.8,
+      "elapsed_sec": 0.222,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T17:56:31",
+      "finished_at": "2026-07-30T17:56:31",
+      "elapsed_ms": 259.9,
+      "elapsed_sec": 0.26,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T18:06:31",
+      "finished_at": "2026-07-30T18:06:32",
+      "elapsed_ms": 240.0,
+      "elapsed_sec": 0.24,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T18:16:32",
+      "finished_at": "2026-07-30T18:16:32",
+      "elapsed_ms": 289.0,
+      "elapsed_sec": 0.289,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T18:26:32",
+      "finished_at": "2026-07-30T18:26:33",
+      "elapsed_ms": 243.7,
+      "elapsed_sec": 0.244,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T18:36:33",
+      "finished_at": "2026-07-30T18:36:33",
+      "elapsed_ms": 249.8,
+      "elapsed_sec": 0.25,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T18:46:33",
+      "finished_at": "2026-07-30T18:46:34",
+      "elapsed_ms": 219.4,
+      "elapsed_sec": 0.219,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T18:56:34",
+      "finished_at": "2026-07-30T18:56:34",
+      "elapsed_ms": 216.5,
+      "elapsed_sec": 0.216,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T19:06:34",
+      "finished_at": "2026-07-30T19:06:35",
+      "elapsed_ms": 309.3,
+      "elapsed_sec": 0.309,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T19:16:35",
+      "finished_at": "2026-07-30T19:16:35",
+      "elapsed_ms": 214.6,
+      "elapsed_sec": 0.215,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T19:26:35",
+      "finished_at": "2026-07-30T19:26:35",
+      "elapsed_ms": 232.8,
+      "elapsed_sec": 0.233,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T19:36:36",
+      "finished_at": "2026-07-30T19:36:36",
+      "elapsed_ms": 218.0,
+      "elapsed_sec": 0.218,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T19:46:36",
+      "finished_at": "2026-07-30T19:46:36",
+      "elapsed_ms": 278.7,
+      "elapsed_sec": 0.279,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T19:50:59",
+      "finished_at": "2026-07-30T19:50:59",
+      "elapsed_ms": 114.4,
+      "elapsed_sec": 0.114,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T19:50:59",
+      "finished_at": "2026-07-30T19:50:59",
+      "elapsed_ms": 98.8,
+      "elapsed_sec": 0.099,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Dashboard",
-      "started_at": "2026-07-20T19:07:27",
-      "finished_at": "2026-07-20T19:07:49",
-      "elapsed_ms": 21516.2,
-      "elapsed_sec": 21.516,
+      "started_at": "2026-07-30T19:51:09",
+      "finished_at": "2026-07-30T19:51:09",
+      "elapsed_ms": 182.1,
+      "elapsed_sec": 0.182,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Dashboard",
-      "started_at": "2026-07-20T19:24:46",
-      "finished_at": "2026-07-20T19:24:48",
-      "elapsed_ms": 1798.2,
-      "elapsed_sec": 1.798,
+      "started_at": "2026-07-30T19:55:31",
+      "finished_at": "2026-07-30T19:55:31",
+      "elapsed_ms": 19.8,
+      "elapsed_sec": 0.02,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Portfolio Profile",
-      "started_at": "2026-07-20T19:25:22",
-      "finished_at": "2026-07-20T19:25:22",
-      "elapsed_ms": 8.5,
-      "elapsed_sec": 0.008,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Dashboard",
-      "started_at": "2026-07-20T19:25:37",
-      "finished_at": "2026-07-20T19:25:37",
-      "elapsed_ms": 28.7,
-      "elapsed_sec": 0.029,
+      "started_at": "2026-07-30T19:55:31",
+      "finished_at": "2026-07-30T19:55:31",
+      "elapsed_ms": 7.3,
+      "elapsed_sec": 0.007,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T19:55:37",
+      "finished_at": "2026-07-30T19:55:37",
+      "elapsed_ms": 10.3,
+      "elapsed_sec": 0.01,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T19:55:37",
+      "finished_at": "2026-07-30T19:55:37",
+      "elapsed_ms": 6.0,
+      "elapsed_sec": 0.006,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T19:25:43",
-      "finished_at": "2026-07-20T19:25:44",
-      "elapsed_ms": 621.2,
-      "elapsed_sec": 0.621,
+      "started_at": "2026-07-30T20:01:00",
+      "finished_at": "2026-07-30T20:01:00",
+      "elapsed_ms": 190.4,
+      "elapsed_sec": 0.19,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Indices Advisor",
-      "started_at": "2026-07-20T19:28:36",
-      "finished_at": "2026-07-20T19:28:37",
-      "elapsed_ms": 1348.5,
-      "elapsed_sec": 1.349,
+      "started_at": "2026-07-30T20:11:01",
+      "finished_at": "2026-07-30T20:11:01",
+      "elapsed_ms": 217.6,
+      "elapsed_sec": 0.218,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
-      "page": "Dashboard",
-      "started_at": "2026-07-20T19:28:45",
-      "finished_at": "2026-07-20T19:28:45",
-      "elapsed_ms": 19.2,
-      "elapsed_sec": 0.019,
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T20:21:02",
+      "finished_at": "2026-07-30T20:21:02",
+      "elapsed_ms": 233.4,
+      "elapsed_sec": 0.233,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
-      "page": "Portfolio Profile",
-      "started_at": "2026-07-20T19:28:50",
-      "finished_at": "2026-07-20T19:28:50",
-      "elapsed_ms": 15.7,
-      "elapsed_sec": 0.016,
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T20:31:03",
+      "finished_at": "2026-07-30T20:31:03",
+      "elapsed_ms": 202.9,
+      "elapsed_sec": 0.203,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
-      "page": "Portfolio Profile",
-      "started_at": "2026-07-20T19:53:19",
-      "finished_at": "2026-07-20T19:53:23",
-      "elapsed_ms": 3274.7,
-      "elapsed_sec": 3.275,
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T20:41:04",
+      "finished_at": "2026-07-30T20:41:04",
+      "elapsed_ms": 214.3,
+      "elapsed_sec": 0.214,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T09:41:05",
-      "finished_at": "2026-07-21T09:43:46",
-      "elapsed_ms": 160725.9,
-      "elapsed_sec": 160.726,
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T20:51:05",
+      "finished_at": "2026-07-30T20:51:05",
+      "elapsed_ms": 202.9,
+      "elapsed_sec": 0.203,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T09:50:50",
-      "finished_at": "2026-07-21T09:51:55",
-      "elapsed_ms": 64264.4,
-      "elapsed_sec": 64.264,
-      "ok": false,
-      "detail": "MT5 initialize failed: (-10005, 'IPC timeout')"
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T09:54:00",
-      "finished_at": "2026-07-21T09:55:05",
-      "elapsed_ms": 65603.4,
-      "elapsed_sec": 65.603,
-      "ok": false,
-      "detail": "MT5 initialize failed: (-10005, 'IPC timeout')"
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T09:56:29",
-      "finished_at": "2026-07-21T09:57:34",
-      "elapsed_ms": 64745.3,
-      "elapsed_sec": 64.745,
-      "ok": false,
-      "detail": "MT5 initialize failed: (-10005, 'IPC timeout')"
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T09:57:34",
-      "finished_at": "2026-07-21T09:58:32",
-      "elapsed_ms": 57627.5,
-      "elapsed_sec": 57.627,
-      "ok": false,
-      "detail": "MT5 initialize failed: (-10002, 'IPC recv failed')"
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T09:58:43",
-      "finished_at": "2026-07-21T09:58:51",
-      "elapsed_ms": 7622.0,
-      "elapsed_sec": 7.622,
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:01:06",
+      "finished_at": "2026-07-30T21:01:06",
+      "elapsed_ms": 200.4,
+      "elapsed_sec": 0.2,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:11:07",
+      "finished_at": "2026-07-30T21:11:07",
+      "elapsed_ms": 210.1,
+      "elapsed_sec": 0.21,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:21:08",
+      "finished_at": "2026-07-30T21:21:08",
+      "elapsed_ms": 212.6,
+      "elapsed_sec": 0.213,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:28:37",
+      "finished_at": "2026-07-30T21:28:38",
+      "elapsed_ms": 246.9,
+      "elapsed_sec": 0.247,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:28:43",
+      "finished_at": "2026-07-30T21:28:43",
+      "elapsed_ms": 130.9,
+      "elapsed_sec": 0.131,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:28:46",
+      "finished_at": "2026-07-30T21:28:46",
+      "elapsed_ms": 111.4,
+      "elapsed_sec": 0.111,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:28:53",
+      "finished_at": "2026-07-30T21:28:53",
+      "elapsed_ms": 135.3,
+      "elapsed_sec": 0.135,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:28:53",
+      "finished_at": "2026-07-30T21:28:53",
+      "elapsed_ms": 139.9,
+      "elapsed_sec": 0.14,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:28:57",
+      "finished_at": "2026-07-30T21:28:57",
+      "elapsed_ms": 104.6,
+      "elapsed_sec": 0.105,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:28:58",
+      "finished_at": "2026-07-30T21:28:58",
+      "elapsed_ms": 100.4,
+      "elapsed_sec": 0.1,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:29:00",
+      "finished_at": "2026-07-30T21:29:00",
+      "elapsed_ms": 104.2,
+      "elapsed_sec": 0.104,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:29:03",
+      "finished_at": "2026-07-30T21:29:03",
+      "elapsed_ms": 126.2,
+      "elapsed_sec": 0.126,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T21:29:05",
+      "finished_at": "2026-07-30T21:29:05",
+      "elapsed_ms": 101.4,
+      "elapsed_sec": 0.101,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Dashboard",
-      "started_at": "2026-07-21T09:58:51",
-      "finished_at": "2026-07-21T09:58:52",
-      "elapsed_ms": 933.3,
-      "elapsed_sec": 0.933,
+      "started_at": "2026-07-30T21:36:18",
+      "finished_at": "2026-07-30T21:36:18",
+      "elapsed_ms": 295.4,
+      "elapsed_sec": 0.295,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T09:58:52",
-      "finished_at": "2026-07-21T09:58:53",
-      "elapsed_ms": 252.4,
-      "elapsed_sec": 0.252,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T10:01:15",
-      "finished_at": "2026-07-21T10:01:15",
+      "started_at": "2026-07-30T21:36:41",
+      "finished_at": "2026-07-30T21:36:41",
       "elapsed_ms": 2.5,
       "elapsed_sec": 0.003,
       "ok": true,
       "detail": "profiles=7"
     },
     {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T10:01:18",
-      "finished_at": "2026-07-21T10:01:19",
-      "elapsed_ms": 137.0,
-      "elapsed_sec": 0.137,
+      "page": "Settings",
+      "started_at": "2026-07-30T21:38:16",
+      "finished_at": "2026-07-30T21:38:16",
+      "elapsed_ms": 2.7,
+      "elapsed_sec": 0.003,
       "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T10:38:04",
-      "finished_at": "2026-07-21T10:38:19",
-      "elapsed_ms": 14687.7,
-      "elapsed_sec": 14.688,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T10:38:19",
-      "finished_at": "2026-07-21T10:38:20",
-      "elapsed_ms": 936.4,
-      "elapsed_sec": 0.936,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T10:58:37",
-      "finished_at": "2026-07-21T10:58:48",
-      "elapsed_ms": 11145.2,
-      "elapsed_sec": 11.145,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T10:59:06",
-      "finished_at": "2026-07-21T10:59:07",
-      "elapsed_ms": 1157.2,
-      "elapsed_sec": 1.157,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T11:32:21",
-      "finished_at": "2026-07-21T11:32:30",
-      "elapsed_ms": 9869.8,
-      "elapsed_sec": 9.87,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "profiles=7"
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T11:32:40",
-      "finished_at": "2026-07-21T11:32:40",
+      "started_at": "2026-07-30T21:38:16",
+      "finished_at": "2026-07-30T21:38:16",
+      "elapsed_ms": 31.2,
+      "elapsed_sec": 0.031,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T21:38:48",
+      "finished_at": "2026-07-30T21:38:49",
+      "elapsed_ms": 14.9,
+      "elapsed_sec": 0.015,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T21:38:49",
+      "finished_at": "2026-07-30T21:38:49",
+      "elapsed_ms": 17.7,
+      "elapsed_sec": 0.018,
+      "ok": true,
+      "detail": "profiles=7"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T21:44:31",
+      "finished_at": "2026-07-30T21:44:33",
+      "elapsed_ms": 595.6,
+      "elapsed_sec": 0.596,
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T21:44:38",
+      "finished_at": "2026-07-30T21:44:38",
+      "elapsed_ms": 59.2,
+      "elapsed_sec": 0.059,
+      "ok": true,
+      "detail": "profiles=7"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T21:53:45",
+      "finished_at": "2026-07-30T21:53:55",
+      "elapsed_ms": 10055.2,
+      "elapsed_sec": 10.055,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T21:54:29",
+      "finished_at": "2026-07-30T21:54:30",
+      "elapsed_ms": 737.3,
+      "elapsed_sec": 0.737,
+      "ok": true,
+      "detail": "profiles=7"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T21:55:20",
+      "finished_at": "2026-07-30T21:55:21",
+      "elapsed_ms": 205.1,
+      "elapsed_sec": 0.205,
+      "ok": true,
+      "detail": "profiles=7"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T21:56:13",
+      "finished_at": "2026-07-30T21:56:25",
+      "elapsed_ms": 305.5,
+      "elapsed_sec": 0.306,
+      "ok": true,
+      "detail": "profiles=7"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T21:57:48",
+      "finished_at": "2026-07-30T21:57:49",
+      "elapsed_ms": 302.5,
+      "elapsed_sec": 0.303,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:02:13",
+      "finished_at": "2026-07-30T22:02:13",
+      "elapsed_ms": 30.3,
+      "elapsed_sec": 0.03,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:02:46",
+      "finished_at": "2026-07-30T22:02:46",
+      "elapsed_ms": 2.6,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:04:22",
+      "finished_at": "2026-07-30T22:04:22",
+      "elapsed_ms": 4.1,
+      "elapsed_sec": 0.004,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:04:22",
+      "finished_at": "2026-07-30T22:04:22",
+      "elapsed_ms": 3.3,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:04:27",
+      "finished_at": "2026-07-30T22:04:27",
+      "elapsed_ms": 3.2,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:04:27",
+      "finished_at": "2026-07-30T22:04:27",
+      "elapsed_ms": 1.9,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:04:40",
+      "finished_at": "2026-07-30T22:04:40",
+      "elapsed_ms": 2.0,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:04:41",
+      "finished_at": "2026-07-30T22:04:41",
+      "elapsed_ms": 2.6,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:07:19",
+      "finished_at": "2026-07-30T22:07:19",
+      "elapsed_ms": 11.2,
+      "elapsed_sec": 0.011,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:07:21",
+      "finished_at": "2026-07-30T22:07:21",
+      "elapsed_ms": 13.1,
+      "elapsed_sec": 0.013,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:07:21",
+      "finished_at": "2026-07-30T22:07:21",
+      "elapsed_ms": 12.1,
+      "elapsed_sec": 0.012,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:07:21",
+      "finished_at": "2026-07-30T22:07:21",
+      "elapsed_ms": 8.5,
+      "elapsed_sec": 0.008,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:07:23",
+      "finished_at": "2026-07-30T22:07:23",
+      "elapsed_ms": 2.6,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:08:50",
+      "finished_at": "2026-07-30T22:08:50",
+      "elapsed_ms": 3.3,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:08:50",
+      "finished_at": "2026-07-30T22:08:50",
+      "elapsed_ms": 1.9,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:08:59",
+      "finished_at": "2026-07-30T22:08:59",
+      "elapsed_ms": 2.4,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:09:10",
+      "finished_at": "2026-07-30T22:09:10",
+      "elapsed_ms": 9.7,
+      "elapsed_sec": 0.01,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:09:11",
+      "finished_at": "2026-07-30T22:09:11",
+      "elapsed_ms": 10.0,
+      "elapsed_sec": 0.01,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:09:11",
+      "finished_at": "2026-07-30T22:09:12",
+      "elapsed_ms": 11.0,
+      "elapsed_sec": 0.011,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:09:12",
+      "finished_at": "2026-07-30T22:09:12",
+      "elapsed_ms": 8.7,
+      "elapsed_sec": 0.009,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:09:13",
+      "finished_at": "2026-07-30T22:09:13",
+      "elapsed_ms": 2.6,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:09:15",
+      "finished_at": "2026-07-30T22:09:15",
+      "elapsed_ms": 2.3,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:09:16",
+      "finished_at": "2026-07-30T22:09:16",
+      "elapsed_ms": 12.8,
+      "elapsed_sec": 0.013,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:09:26",
+      "finished_at": "2026-07-30T22:09:26",
+      "elapsed_ms": 11.4,
+      "elapsed_sec": 0.011,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:09:29",
+      "finished_at": "2026-07-30T22:09:29",
+      "elapsed_ms": 9.8,
+      "elapsed_sec": 0.01,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:09:29",
+      "finished_at": "2026-07-30T22:09:29",
+      "elapsed_ms": 11.0,
+      "elapsed_sec": 0.011,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:09:29",
+      "finished_at": "2026-07-30T22:09:29",
+      "elapsed_ms": 8.4,
+      "elapsed_sec": 0.008,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:09:31",
+      "finished_at": "2026-07-30T22:09:31",
+      "elapsed_ms": 13.7,
+      "elapsed_sec": 0.014,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:09:51",
+      "finished_at": "2026-07-30T22:09:53",
+      "elapsed_ms": 1849.8,
+      "elapsed_sec": 1.85,
+      "ok": true,
+      "detail": "Connected as profile 'DerivBVI' (login 21419903)."
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:09:58",
+      "finished_at": "2026-07-30T22:09:58",
+      "elapsed_ms": 14.6,
+      "elapsed_sec": 0.015,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:10:01",
+      "finished_at": "2026-07-30T22:10:01",
+      "elapsed_ms": 3.5,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:10:05",
+      "finished_at": "2026-07-30T22:10:05",
+      "elapsed_ms": 2.2,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:10:55",
+      "finished_at": "2026-07-30T22:11:00",
+      "elapsed_ms": 5973.1,
+      "elapsed_sec": 5.973,
+      "ok": false,
+      "detail": "MT5 login failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:11:05",
+      "finished_at": "2026-07-30T22:11:05",
+      "elapsed_ms": 2.0,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:11:09",
+      "finished_at": "2026-07-30T22:11:09",
+      "elapsed_ms": 6.0,
+      "elapsed_sec": 0.006,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:11:09",
+      "finished_at": "2026-07-30T22:11:09",
+      "elapsed_ms": 5.2,
+      "elapsed_sec": 0.005,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:11:20",
+      "finished_at": "2026-07-30T22:11:20",
+      "elapsed_ms": 2.4,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:11:23",
+      "finished_at": "2026-07-30T22:11:23",
+      "elapsed_ms": 2.3,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:11:23",
+      "finished_at": "2026-07-30T22:11:23",
+      "elapsed_ms": 3.1,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:11:34",
+      "finished_at": "2026-07-30T22:11:34",
+      "elapsed_ms": 2.4,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:12:04",
+      "finished_at": "2026-07-30T22:12:04",
+      "elapsed_ms": 6.2,
+      "elapsed_sec": 0.006,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:12:04",
+      "finished_at": "2026-07-30T22:12:04",
+      "elapsed_ms": 34.2,
+      "elapsed_sec": 0.034,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:19:29",
+      "finished_at": "2026-07-30T22:19:29",
+      "elapsed_ms": 11.2,
+      "elapsed_sec": 0.011,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:19:30",
+      "finished_at": "2026-07-30T22:19:30",
+      "elapsed_ms": 11.1,
+      "elapsed_sec": 0.011,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:19:31",
+      "finished_at": "2026-07-30T22:19:31",
+      "elapsed_ms": 14.2,
+      "elapsed_sec": 0.014,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:19:34",
+      "finished_at": "2026-07-30T22:19:34",
+      "elapsed_ms": 3.0,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:19:38",
+      "finished_at": "2026-07-30T22:19:38",
+      "elapsed_ms": 2.3,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:19:38",
+      "finished_at": "2026-07-30T22:19:38",
+      "elapsed_ms": 37.3,
+      "elapsed_sec": 0.037,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:19:57",
+      "finished_at": "2026-07-30T22:19:57",
+      "elapsed_ms": 5.7,
+      "elapsed_sec": 0.006,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:19:57",
+      "finished_at": "2026-07-30T22:19:57",
+      "elapsed_ms": 13.0,
+      "elapsed_sec": 0.013,
+      "ok": true,
+      "detail": "profiles=7"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:20:19",
+      "finished_at": "2026-07-30T22:20:19",
       "elapsed_ms": 2.1,
       "elapsed_sec": 0.002,
       "ok": true,
@@ -371,285 +1343,510 @@
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T11:50:45",
-      "finished_at": "2026-07-21T11:50:45",
-      "elapsed_ms": 14.9,
-      "elapsed_sec": 0.015,
+      "started_at": "2026-07-30T22:20:19",
+      "finished_at": "2026-07-30T22:20:19",
+      "elapsed_ms": 14.3,
+      "elapsed_sec": 0.014,
       "ok": true,
-      "detail": "profiles=7"
+      "detail": "profiles=8"
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T11:50:51",
-      "finished_at": "2026-07-21T11:50:51",
-      "elapsed_ms": 3.1,
+      "started_at": "2026-07-30T22:20:19",
+      "finished_at": "2026-07-30T22:20:19",
+      "elapsed_ms": 20.2,
+      "elapsed_sec": 0.02,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:20:31",
+      "finished_at": "2026-07-30T22:20:31",
+      "elapsed_ms": 2.5,
       "elapsed_sec": 0.003,
       "ok": true,
-      "detail": "profiles=7"
+      "detail": "profiles=8"
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T11:50:52",
-      "finished_at": "2026-07-21T11:50:52",
-      "elapsed_ms": 3.1,
+      "started_at": "2026-07-30T22:20:31",
+      "finished_at": "2026-07-30T22:20:31",
+      "elapsed_ms": 1.7,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:20:56",
+      "finished_at": "2026-07-30T22:20:56",
+      "elapsed_ms": 10.2,
+      "elapsed_sec": 0.01,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:20:59",
+      "finished_at": "2026-07-30T22:20:59",
+      "elapsed_ms": 2.5,
       "elapsed_sec": 0.003,
       "ok": true,
-      "detail": "profiles=7"
+      "detail": "profiles=8"
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T11:50:54",
-      "finished_at": "2026-07-21T11:50:54",
-      "elapsed_ms": 2.6,
-      "elapsed_sec": 0.003,
+      "started_at": "2026-07-30T22:21:04",
+      "finished_at": "2026-07-30T22:21:04",
+      "elapsed_ms": 3.6,
+      "elapsed_sec": 0.004,
       "ok": true,
-      "detail": "profiles=7"
+      "detail": "profiles=8"
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T11:50:54",
-      "finished_at": "2026-07-21T11:50:54",
-      "elapsed_ms": 23.6,
-      "elapsed_sec": 0.024,
-      "ok": true,
-      "detail": "profiles=7"
-    },
-    {
-      "page": "Settings",
-      "started_at": "2026-07-21T11:51:01",
-      "finished_at": "2026-07-21T11:51:01",
+      "started_at": "2026-07-30T22:21:04",
+      "finished_at": "2026-07-30T22:21:04",
       "elapsed_ms": 2.9,
       "elapsed_sec": 0.003,
       "ok": true,
-      "detail": "profiles=7"
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:21:09",
+      "finished_at": "2026-07-30T22:21:09",
+      "elapsed_ms": 11.7,
+      "elapsed_sec": 0.012,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:21:11",
+      "finished_at": "2026-07-30T22:21:11",
+      "elapsed_ms": 19.7,
+      "elapsed_sec": 0.02,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:21:42",
+      "finished_at": "2026-07-30T22:21:42",
+      "elapsed_ms": 14.8,
+      "elapsed_sec": 0.015,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T11:51:01",
-      "finished_at": "2026-07-21T11:51:01",
-      "elapsed_ms": 3.8,
-      "elapsed_sec": 0.004,
+      "started_at": "2026-07-30T22:21:47",
+      "finished_at": "2026-07-30T22:21:47",
+      "elapsed_ms": 5.7,
+      "elapsed_sec": 0.006,
       "ok": true,
-      "detail": "profiles=7"
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T11:53:07",
-      "finished_at": "2026-07-21T11:53:07",
-      "elapsed_ms": 37.0,
-      "elapsed_sec": 0.037,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T11:53:11",
-      "finished_at": "2026-07-21T11:53:11",
-      "elapsed_ms": 138.1,
-      "elapsed_sec": 0.138,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T12:01:07",
-      "finished_at": "2026-07-21T12:01:08",
-      "elapsed_ms": 273.1,
-      "elapsed_sec": 0.273,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T12:01:08",
-      "finished_at": "2026-07-21T12:01:08",
-      "elapsed_ms": 126.2,
-      "elapsed_sec": 0.126,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T12:21:10",
-      "finished_at": "2026-07-21T12:21:10",
-      "elapsed_ms": 218.7,
-      "elapsed_sec": 0.219,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T12:25:37",
-      "finished_at": "2026-07-21T12:25:39",
-      "elapsed_ms": 1503.4,
-      "elapsed_sec": 1.503,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T12:32:13",
-      "finished_at": "2026-07-21T12:32:14",
-      "elapsed_ms": 380.2,
-      "elapsed_sec": 0.38,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T13:06:56",
-      "finished_at": "2026-07-21T13:06:56",
-      "elapsed_ms": 224.2,
-      "elapsed_sec": 0.224,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T13:20:41",
-      "finished_at": "2026-07-21T13:20:41",
-      "elapsed_ms": 263.2,
-      "elapsed_sec": 0.263,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T13:25:06",
-      "finished_at": "2026-07-21T13:25:06",
-      "elapsed_ms": 229.9,
-      "elapsed_sec": 0.23,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-07-21T14:31:37",
-      "finished_at": "2026-07-21T14:31:38",
-      "elapsed_ms": 548.1,
-      "elapsed_sec": 0.548,
-      "ok": true,
-      "detail": "Connected as profile 'Main' (login 100979130)."
+      "detail": "profiles=8"
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T14:32:44",
-      "finished_at": "2026-07-21T14:32:44",
+      "started_at": "2026-07-30T22:21:49",
+      "finished_at": "2026-07-30T22:21:49",
+      "elapsed_ms": 3.4,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:21:49",
+      "finished_at": "2026-07-30T22:21:49",
+      "elapsed_ms": 5.8,
+      "elapsed_sec": 0.006,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:22:11",
+      "finished_at": "2026-07-30T22:22:19",
+      "elapsed_ms": 8125.3,
+      "elapsed_sec": 8.125,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:22:34",
+      "finished_at": "2026-07-30T22:22:34",
+      "elapsed_ms": 16.8,
+      "elapsed_sec": 0.017,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-07-30T22:22:37",
+      "finished_at": "2026-07-30T22:22:37",
+      "elapsed_ms": 12.3,
+      "elapsed_sec": 0.012,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:22:40",
+      "finished_at": "2026-07-30T22:22:40",
+      "elapsed_ms": 2.1,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:22:48",
+      "finished_at": "2026-07-30T22:22:48",
+      "elapsed_ms": 2.6,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:22:48",
+      "finished_at": "2026-07-30T22:22:48",
+      "elapsed_ms": 4.7,
+      "elapsed_sec": 0.005,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:29:29",
+      "finished_at": "2026-07-30T22:29:36",
+      "elapsed_ms": 6780.9,
+      "elapsed_sec": 6.781,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:29:43",
+      "finished_at": "2026-07-30T22:29:43",
       "elapsed_ms": 2.3,
       "elapsed_sec": 0.002,
       "ok": true,
-      "detail": "profiles=7"
+      "detail": "profiles=8"
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T14:32:53",
-      "finished_at": "2026-07-21T14:32:53",
-      "elapsed_ms": 2.4,
-      "elapsed_sec": 0.002,
+      "started_at": "2026-07-30T22:29:46",
+      "finished_at": "2026-07-30T22:29:46",
+      "elapsed_ms": 2.9,
+      "elapsed_sec": 0.003,
       "ok": true,
-      "detail": "profiles=7"
+      "detail": "profiles=8"
     },
     {
       "page": "Settings",
-      "started_at": "2026-07-21T14:33:56",
-      "finished_at": "2026-07-21T14:33:56",
+      "started_at": "2026-07-30T22:29:46",
+      "finished_at": "2026-07-30T22:29:46",
+      "elapsed_ms": 2.5,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:34:03",
+      "finished_at": "2026-07-30T22:34:03",
       "elapsed_ms": 3.2,
       "elapsed_sec": 0.003,
       "ok": true,
-      "detail": "profiles=7"
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:34:03",
+      "finished_at": "2026-07-30T22:34:03",
+      "elapsed_ms": 1.8,
+      "elapsed_sec": 0.002,
+      "ok": true,
+      "detail": "profiles=8"
     },
     {
       "page": "Dashboard",
-      "started_at": "2026-07-21T14:46:15",
-      "finished_at": "2026-07-21T14:46:15",
-      "elapsed_ms": 306.2,
-      "elapsed_sec": 0.306,
+      "started_at": "2026-07-30T22:34:26",
+      "finished_at": "2026-07-30T22:34:26",
+      "elapsed_ms": 12.4,
+      "elapsed_sec": 0.012,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:34:28",
+      "finished_at": "2026-07-30T22:34:28",
+      "elapsed_ms": 11.1,
+      "elapsed_sec": 0.011,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:34:28",
+      "finished_at": "2026-07-30T22:34:28",
+      "elapsed_ms": 10.3,
+      "elapsed_sec": 0.01,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:34:28",
+      "finished_at": "2026-07-30T22:34:28",
+      "elapsed_ms": 9.6,
+      "elapsed_sec": 0.01,
+      "ok": false,
+      "detail": "MT5 initialize failed: (-6, 'Terminal: Authorization failed')"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:38:55",
+      "finished_at": "2026-07-30T22:38:59",
+      "elapsed_ms": 4349.9,
+      "elapsed_sec": 4.35,
       "ok": true,
       "detail": "Connected as profile 'Weltrade' (login 34083957)."
     },
     {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T14:46:19",
-      "finished_at": "2026-07-21T14:46:19",
-      "elapsed_ms": 22.0,
-      "elapsed_sec": 0.022,
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:39:11",
+      "finished_at": "2026-07-30T22:39:11",
+      "elapsed_ms": 17.7,
+      "elapsed_sec": 0.018,
       "ok": true,
       "detail": "Connected as profile 'Weltrade' (login 34083957)."
     },
     {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T14:46:33",
-      "finished_at": "2026-07-21T14:46:33",
-      "elapsed_ms": 7.1,
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:39:11",
+      "finished_at": "2026-07-30T22:39:11",
+      "elapsed_ms": 6.7,
       "elapsed_sec": 0.007,
       "ok": true,
       "detail": "Connected as profile 'Weltrade' (login 34083957)."
     },
     {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T14:46:33",
-      "finished_at": "2026-07-21T14:46:33",
-      "elapsed_ms": 4.3,
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:39:14",
+      "finished_at": "2026-07-30T22:39:14",
+      "elapsed_ms": 8.3,
+      "elapsed_sec": 0.008,
+      "ok": true,
+      "detail": "Connected as profile 'Weltrade' (login 34083957)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:39:14",
+      "finished_at": "2026-07-30T22:39:14",
+      "elapsed_ms": 6.2,
+      "elapsed_sec": 0.006,
+      "ok": true,
+      "detail": "Connected as profile 'Weltrade' (login 34083957)."
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:39:18",
+      "finished_at": "2026-07-30T22:39:18",
+      "elapsed_ms": 3.3,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:39:22",
+      "finished_at": "2026-07-30T22:39:22",
+      "elapsed_ms": 2.8,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:39:49",
+      "finished_at": "2026-07-30T22:39:49",
+      "elapsed_ms": 3.5,
       "elapsed_sec": 0.004,
       "ok": true,
-      "detail": "Connected as profile 'Weltrade' (login 34083957)."
+      "detail": "profiles=8"
     },
     {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T15:39:39",
-      "finished_at": "2026-07-21T15:39:39",
-      "elapsed_ms": 178.5,
-      "elapsed_sec": 0.179,
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:39:55",
+      "finished_at": "2026-07-30T22:39:55",
+      "elapsed_ms": 8.3,
+      "elapsed_sec": 0.008,
       "ok": true,
-      "detail": "Connected as profile 'Weltrade' (login 34083957)."
+      "detail": "Connected as profile 'Demoe' (login 6132229)."
     },
     {
-      "page": "Indices Advisor",
-      "started_at": "2026-07-21T15:39:40",
-      "finished_at": "2026-07-21T15:39:40",
-      "elapsed_ms": 20.6,
-      "elapsed_sec": 0.021,
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:41:15",
+      "finished_at": "2026-07-30T22:41:16",
+      "elapsed_ms": 913.5,
+      "elapsed_sec": 0.913,
       "ok": true,
-      "detail": "Connected as profile 'Weltrade' (login 34083957)."
+      "detail": "Connected as profile 'Demoe' (login 6132229)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:43:56",
+      "finished_at": "2026-07-30T22:43:56",
+      "elapsed_ms": 897.8,
+      "elapsed_sec": 0.898,
+      "ok": true,
+      "detail": "Connected as profile 'Demoe' (login 6132229)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:44:02",
+      "finished_at": "2026-07-30T22:44:02",
+      "elapsed_ms": 19.7,
+      "elapsed_sec": 0.02,
+      "ok": true,
+      "detail": "Connected as profile 'Demoe' (login 6132229)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:45:14",
+      "finished_at": "2026-07-30T22:45:14",
+      "elapsed_ms": 940.9,
+      "elapsed_sec": 0.941,
+      "ok": true,
+      "detail": "Connected as profile 'Demoe' (login 6132229)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:45:21",
+      "finished_at": "2026-07-30T22:45:21",
+      "elapsed_ms": 19.7,
+      "elapsed_sec": 0.02,
+      "ok": true,
+      "detail": "Connected as profile 'Demoe' (login 6132229)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:45:26",
+      "finished_at": "2026-07-30T22:45:26",
+      "elapsed_ms": 9.0,
+      "elapsed_sec": 0.009,
+      "ok": true,
+      "detail": "Connected as profile 'Demoe' (login 6132229)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:46:44",
+      "finished_at": "2026-07-30T22:46:45",
+      "elapsed_ms": 905.0,
+      "elapsed_sec": 0.905,
+      "ok": true,
+      "detail": "Connected as profile 'Demoe' (login 6132229)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-07-30T22:51:55",
+      "finished_at": "2026-07-30T22:51:55",
+      "elapsed_ms": 912.7,
+      "elapsed_sec": 0.913,
+      "ok": true,
+      "detail": "Connected as profile 'Demoe' (login 6132229)."
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:52:26",
+      "finished_at": "2026-07-30T22:52:26",
+      "elapsed_ms": 3.1,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:52:42",
+      "finished_at": "2026-07-30T22:52:42",
+      "elapsed_ms": 3.4,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:52:47",
+      "finished_at": "2026-07-30T22:52:47",
+      "elapsed_ms": 34.1,
+      "elapsed_sec": 0.034,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-07-30T22:53:15",
+      "finished_at": "2026-07-30T22:53:15",
+      "elapsed_ms": 3.0,
+      "elapsed_sec": 0.003,
+      "ok": true,
+      "detail": "profiles=8"
     }
   ],
   "summary": {
     "Indices Advisor": {
-      "count": 30,
-      "total_ms": 36608.434299912464,
-      "avg_ms": 1220.3,
-      "last_ms": 20.6,
-      "min_ms": 4.3,
-      "max_ms": 14687.7,
-      "last_at": "2026-07-21T15:39:40"
+      "count": 718,
+      "total_ms": 556663.9782996385,
+      "avg_ms": 775.3,
+      "last_ms": 12.3,
+      "min_ms": 3.4,
+      "max_ms": 94938.3,
+      "last_at": "2026-07-30T22:22:37"
     },
     "Dashboard": {
-      "count": 23,
-      "total_ms": 469862.49000011873,
-      "avg_ms": 20428.8,
-      "last_ms": 306.2,
-      "min_ms": 19.2,
+      "count": 325,
+      "total_ms": 752810.592599798,
+      "avg_ms": 2316.3,
+      "last_ms": 912.7,
+      "min_ms": 5.2,
       "max_ms": 160725.9,
-      "last_at": "2026-07-21T14:46:15"
+      "last_at": "2026-07-30T22:51:55"
     },
     "Portfolio Profile": {
-      "count": 3,
-      "total_ms": 3298.933499958366,
-      "avg_ms": 1099.6,
-      "last_ms": 3274.7,
-      "min_ms": 8.5,
+      "count": 37,
+      "total_ms": 11600.512599892681,
+      "avg_ms": 313.5,
+      "last_ms": 210.9,
+      "min_ms": 3.2,
       "max_ms": 3274.7,
-      "last_at": "2026-07-20T19:53:23"
+      "last_at": "2026-07-26T01:19:17"
     },
     "Settings": {
-      "count": 12,
-      "total_ms": 66.63439997203113,
-      "avg_ms": 5.6,
-      "last_ms": 3.2,
-      "min_ms": 2.1,
-      "max_ms": 23.6,
-      "last_at": "2026-07-21T14:33:56"
+      "count": 350,
+      "total_ms": 7455.45020018028,
+      "avg_ms": 21.3,
+      "last_ms": 3.0,
+      "min_ms": 1.7,
+      "max_ms": 1935.2,
+      "last_at": "2026-07-30T22:53:15"
+    },
+    "Journal": {
+      "count": 1,
+      "total_ms": 61.28490000264719,
+      "avg_ms": 61.3,
+      "last_ms": 61.3,
+      "min_ms": 61.3,
+      "max_ms": 61.3,
+      "last_at": "2026-07-25T04:23:42"
     }
   },
-  "updated_at": "2026-07-21T15:39:40"
+  "updated_at": "2026-07-30T22:53:15"
 }

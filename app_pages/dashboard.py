@@ -8,10 +8,16 @@ import streamlit as st
 
 from core import mt5_client
 from core.calendar_view import build_calendar_html, build_month_grid
-from core.config import load_config, get_profile_plan, calculate_plan_progress, get_active_profile
+from core.config import load_config, get_profile_plan, calculate_plan_progress, get_active_profile, set_risk_params
 from core.plan_frequency import build_week_targets_for_grid
 from core.hidden_assets_store import load_hidden_assets
 from core.page_load_monitor import page_bootstrap, recent_visits, summary_table_rows
+from core.sl_risk import max_cash_at_risk
+import importlib
+
+# Streamlit can keep a stale mt5_client after new helpers are added; refresh if needed.
+if not hasattr(mt5_client, "apply_suggested_sls") or not hasattr(mt5_client, "modify_position_sltp"):
+    mt5_client = importlib.reload(mt5_client)
 
 st.title("📊 Dashboard")
 
@@ -163,14 +169,101 @@ else:
 
 st.divider()
 
+st.subheader("Risk & SL Picker")
+st.caption(
+    "Stop-loss sizing from your risk tolerance. Max cash at risk is split "
+    "equally across open positions; each share converts to SL points via the "
+    "symbol's tick value. SL Cash across all positions sums to Max Cash at Risk."
+)
+
+live_balance = float(account["balance"]) if account else float(cfg["risk"]["account_size"])
+risk_percentage = st.slider(
+    "Risk Tolerance (%)",
+    min_value=1.0,
+    max_value=100.0,
+    value=float(cfg["risk"]["risk_percentage"]),
+    step=0.5,
+    key="dashboard_risk_pct",
+)
+if live_balance != cfg["risk"]["account_size"] or risk_percentage != cfg["risk"]["risk_percentage"]:
+    set_risk_params(cfg, live_balance, risk_percentage)
+    st.session_state["app_config"] = cfg
+
+max_risk = round(max_cash_at_risk(live_balance, risk_percentage), 2)
+r1, r2, r3 = st.columns(3)
+r1.metric("Account Balance", f"${live_balance:,.2f}")
+r2.metric("Risk Tolerance", f"{risk_percentage:.1f}%")
+r3.metric("Max Cash at Risk", f"${max_risk:,.2f}")
+
 st.subheader("Open Positions")
-positions_df = mt5_client.get_open_positions_df()
+positions_df = mt5_client.get_open_positions_with_sl_df(max_risk)
 if positions_df.empty:
     st.info("No open positions.")
 else:
+    header_l, header_r = st.columns([3, 2])
+    with header_l:
+        st.caption("Suggested SL is calculated from your risk budget — apply it to MT5 below.")
+    with header_r:
+        apply_all = st.button(
+            "Apply All Suggested SLs",
+            type="primary",
+            width="stretch",
+            key="apply_all_suggested_sl",
+            help="Writes each Suggested SL onto the matching open MT5 position (keeps existing TP).",
+        )
+
+    if apply_all:
+        with st.spinner("Applying suggested stop-losses on MT5…"):
+            st.session_state["last_sl_apply"] = mt5_client.apply_suggested_sls(positions_df)
+        st.rerun()
+
+    last_apply = st.session_state.pop("last_sl_apply", None)
+    if last_apply:
+        if last_apply["failed"] == 0:
+            st.success(f"Applied Suggested SL on {last_apply['ok']} position(s).")
+        elif last_apply["ok"] == 0:
+            st.error("Failed to apply Suggested SL on any position.")
+        else:
+            st.warning(f"Applied {last_apply['ok']} · failed {last_apply['failed']}.")
+        for item in last_apply.get("results") or []:
+            st.caption(item["message"])
+
     st.dataframe(positions_df, hide_index=True, width="stretch")
     total_open_profit = positions_df["Profit"].sum()
-    st.caption(f"Total floating P/L across {len(positions_df)} position(s): ${total_open_profit:,.2f}")
+    total_sl_cash = float(positions_df["SL Cash"].sum())
+    st.caption(
+        f"Total floating P/L across {len(positions_df)} position(s): ${total_open_profit:,.2f} · "
+        f"SL Cash total: ${total_sl_cash:,.2f} (budget ${max_risk:,.2f})"
+    )
+
+    st.markdown("**Apply per position**")
+    for _, row in positions_df.iterrows():
+        ticket = int(row["Ticket"])
+        suggested = float(row["Suggested SL"])
+        symbol = str(row["Symbol"])
+        col_a, col_b, col_c = st.columns([3, 2, 2])
+        with col_a:
+            st.write(
+                f"`#{ticket}` · {symbol} · {row['Type']} · "
+                f"Suggested SL **{suggested}** (cash ${float(row['SL Cash']):,.2f})"
+            )
+        with col_b:
+            current_sl = float(row["SL"] or 0)
+            st.caption(f"Current SL: {current_sl if current_sl else '—'}")
+        with col_c:
+            if st.button(
+                "Apply SL",
+                key=f"apply_sl_{ticket}",
+                width="stretch",
+                disabled=suggested <= 0,
+            ):
+                ok, msg = mt5_client.modify_position_sltp(ticket, suggested, symbol=symbol)
+                st.session_state["last_sl_apply"] = {
+                    "ok": 1 if ok else 0,
+                    "failed": 0 if ok else 1,
+                    "results": [{"ticket": ticket, "ok": ok, "message": msg, "sl": suggested}],
+                }
+                st.rerun()
 
 st.divider()
 
