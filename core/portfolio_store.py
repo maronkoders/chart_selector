@@ -60,6 +60,70 @@ def list_months(store: dict | None = None) -> list[str]:
     return sorted(months, reverse=True)
 
 
+def list_years(store: dict | None = None) -> list[int]:
+    """Return sorted years present in the cache (newest first)."""
+    years: set[int] = set()
+    for key in list_months(store):
+        try:
+            years.add(int(str(key)[:4]))
+        except (TypeError, ValueError):
+            continue
+    return sorted(years, reverse=True)
+
+
+def months_for_year(year: int, *, through_current: bool = True) -> list[str]:
+    """Return YYYY-MM keys from Jan..(Dec or current month) for *year*."""
+    today = dt.date.today()
+    last_month = 12
+    if through_current and year == today.year:
+        last_month = today.month
+    elif year > today.year:
+        last_month = 0
+    return [f"{year}-{m:02d}" for m in range(1, last_month + 1)]
+
+
+def aggregate_yearly_pnl(store: dict, year: int, *, through_current: bool = True) -> list[dict]:
+    """Sum PnL across all profiles for each month of *year*.
+
+    Returns rows with Month, Label, PnL, Net PnL, Trades — including months with
+    zero activity so the line runs Jan→current (or Dec) with real negatives.
+    """
+    profiles = store.get("profiles") or {}
+    keys = months_for_year(year, through_current=through_current)
+    month_names = (
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    )
+    rows: list[dict] = []
+    for key in keys:
+        month_num = int(key.split("-")[1])
+        pnl = 0.0
+        net = 0.0
+        trades = 0
+        for entry in profiles.values():
+            if not isinstance(entry, dict):
+                continue
+            stats = (entry.get("months") or {}).get(key) or {}
+            pnl += float(stats.get("pnl") or 0)
+            net += float(stats.get("net_pnl") or 0)
+            trades += int(stats.get("trades") or 0)
+        rows.append({
+            "Month": key,
+            "Label": month_names[month_num - 1],
+            "MonthNum": month_num,
+            "PnL": round(pnl, 2),
+            "Net PnL": round(net, 2),
+            "Trades": trades,
+            "Cumulative PnL": 0.0,
+        })
+
+    running = 0.0
+    for row in rows:
+        running += float(row["PnL"])
+        row["Cumulative PnL"] = round(running, 2)
+    return rows
+
+
 def _aggregate_closing_deals(deals_df) -> dict[str, dict]:
     """Build {YYYY-MM: stats} from closing deals (Entry OUT), matching Dashboard PnL."""
     if deals_df is None or deals_df.empty:

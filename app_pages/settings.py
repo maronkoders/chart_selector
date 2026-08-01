@@ -390,29 +390,42 @@ with tab2:
             with c_save:
                 save_clicked = st.button("💾 Save classes", width="stretch")
             with c_all:
-                if st.button("Select all", width="stretch"):
-                    set_enabled_index_classes(cfg, profile_name, catalog)
-                    st.session_state.pop(widget_key, None)
-                    st.session_state.pop("asset_data", None)
-                    st.success("All classes enabled.")
-                    st.rerun()
+                select_all_clicked = st.button("Select all", width="stretch")
             with c_none:
-                if st.button("Clear all", width="stretch"):
-                    set_enabled_index_classes(cfg, profile_name, [])
-                    st.session_state.pop(widget_key, None)
-                    st.session_state.pop("asset_data", None)
-                    st.success("All classes disabled.")
-                    st.rerun()
+                clear_all_clicked = st.button("Clear all", width="stretch")
 
-            if save_clicked:
-                set_enabled_index_classes(cfg, profile_name, selected)
+            def _persist_and_sync_classes(new_classes: list[str], label: str) -> None:
+                set_enabled_index_classes(cfg, profile_name, new_classes)
                 st.session_state.pop(widget_key, None)
                 st.session_state.pop("asset_data", None)
+                local_cfg = load_config()
+                st.session_state.app_config = local_cfg
+                _, local_profile = get_active_profile(local_cfg)
+                local_universe = get_profile_universe(profile_name, local_profile)
+                ok_conn, msg_conn = mt5_client.ensure_connection(local_cfg, force=True)
+                if not ok_conn:
+                    st.warning(f"{label} saved, but MT5 sync failed: {msg_conn}")
+                    return
+                with st.spinner("Resetting MT5 Market Watch + charts to enabled classes…"):
+                    sync_result = mt5_client.sync_universe_to_market_watch_and_charts(local_universe)
+                charts = sync_result.get("charts") or {}
                 st.success(
-                    f"Saved {len(selected)} class(es) for `{profile_name}`."
+                    f"{label} · Market Watch {len(sync_result.get('desired') or [])} symbol(s) · "
+                    f"charts opened {charts.get('opened', 0)}."
                 )
+                if charts.get("error") and not charts.get("ok"):
+                    st.warning(charts["error"])
+
+            if select_all_clicked:
+                _persist_and_sync_classes(catalog, f"All {len(catalog)} class(es) enabled")
+                st.rerun()
+            if clear_all_clicked:
+                _persist_and_sync_classes([], "All classes disabled")
                 st.rerun()
 
+            if save_clicked:
+                _persist_and_sync_classes(selected, f"Saved {len(selected)} class(es) for `{profile_name}`")
+                st.rerun()
             st.divider()
             st.markdown("**MT5 Market Watch + Charts**")
             st.caption(

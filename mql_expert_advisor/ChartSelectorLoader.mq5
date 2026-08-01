@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                         ChartSelectorLoader.mq5  |
 //|                                         Infynite Solutions        |
-//|  Expert Advisor: reset charts to exactly the Market Watch set,   |
+//|  Expert Advisor: reset charts to the app's filtered watchlist,   |
 //|  each opened on M1 with the new_me indicator template.           |
 //|                                                                   |
 //|  Setup (once):                                                    |
@@ -10,17 +10,19 @@
 //|    3. Drag it onto ANY one chart and leave it running             |
 //|                                                                   |
 //|  On start / on each Python request:                               |
-//|    close every other chart, then open the requested symbols       |
-//|    (or Market Watch if no request file is pending).               |
+//|    close every other chart, then open ONLY the filtered symbol    |
+//|    list from the app (enabled index classes). Never open the      |
+//|    full unfiltered Market Watch on reload.                        |
 //+------------------------------------------------------------------+
 #property copyright   "Infynite Solutions"
-#property version     "1.20"
-#property description "Closes open charts, then opens requested/Market Watch charts with new_me"
+#property version     "1.30"
+#property description "Closes open charts, then opens enabled-class watchlist charts with new_me"
 #property strict
 
 #define REQUEST_FILE   "chart_selector\\open_charts.request"
 #define STATUS_FILE    "chart_selector\\open_charts.status"
 #define HEARTBEAT_FILE "chart_selector\\loader.heartbeat"
+#define DESIRED_FILE   "chart_selector\\desired_symbols.list"
 #define DEFAULT_TPL    "chart_selector_new_me.tpl"
 #define POLL_SECONDS   1
 
@@ -161,12 +163,58 @@ void ParseSymbolsCsv(const string symbols_csv, string &desired[])
       string sym = parts[i];
       StringTrimLeft(sym);
       StringTrimRight(sym);
-      if(sym == "")
+      if(sym == "" || sym == "*")
          continue;
       int sz = ArraySize(desired);
       ArrayResize(desired, sz + 1);
       desired[sz] = sym;
      }
+  }
+
+//+------------------------------------------------------------------+
+void SaveDesiredSymbols(string &desired[])
+  {
+   FolderCreate("chart_selector");
+   int h = FileOpen(DESIRED_FILE, FILE_WRITE|FILE_TXT|FILE_ANSI);
+   if(h == INVALID_HANDLE)
+      return;
+   for(int i = 0; i < ArraySize(desired); i++)
+     {
+      if(desired[i] == "")
+         continue;
+      FileWriteString(h, desired[i] + "\n");
+     }
+   FileClose(h);
+  }
+
+//+------------------------------------------------------------------+
+bool LoadDesiredSymbolsFile(string &desired[])
+  {
+   ArrayResize(desired, 0);
+   if(!FileIsExist(DESIRED_FILE))
+      return false;
+   string body = ReadAll(DESIRED_FILE);
+   if(body == "")
+      return false;
+
+   int start = 0;
+   while(start >= 0 && start < StringLen(body))
+     {
+      int nl = StringFind(body, "\n", start);
+      if(nl < 0)
+         nl = StringLen(body);
+      string line = StringSubstr(body, start, nl - start);
+      StringTrimLeft(line);
+      StringTrimRight(line);
+      if(line != "" && StringFind(line, "=") < 0)
+        {
+         int sz = ArraySize(desired);
+         ArrayResize(desired, sz + 1);
+         desired[sz] = line;
+        }
+      start = nl + 1;
+     }
+   return ArraySize(desired) > 0;
   }
 
 //+------------------------------------------------------------------+
@@ -210,7 +258,7 @@ void RebuildCharts(string &desired[], const ENUM_TIMEFRAMES tf, const string tpl
 
    WriteStatus(opened, 0, closed, skipped, err);
    Comment(StringFormat(
-      "ChartSelectorLoader ON — closed %d, opened %d watchlist chart(s)",
+      "ChartSelectorLoader ON — closed %d, opened %d enabled-class chart(s)",
       closed, opened));
    PrintFormat("ChartSelectorLoader: closed=%d opened=%d skipped=%d err=%s",
                closed, opened, skipped, err);
@@ -237,35 +285,43 @@ void ProcessRequest()
    ENUM_TIMEFRAMES tf = ParseTimeframe(tf_name);
 
    string desired[];
-   if(source == "market_watch" || symbols_csv == "" || symbols_csv == "*")
+   // Only explicit source=market_watch may open the full MW set.
+   // Empty symbols with source=symbols must NOT fall back to MW (that
+   // reopened Boom/Crash/Step after the user disabled those classes).
+   if(source == "market_watch")
       CollectMarketWatchSymbols(desired);
    else
       ParseSymbolsCsv(symbols_csv, desired);
 
    if(ArraySize(desired) == 0)
      {
-      // Still close leftovers, then report empty watchlist.
       int closed = CloseAllChartsExceptHost(ChartID());
-      WriteStatus(0, 0, closed, 0, "no symbols in request/Market Watch");
+      WriteStatus(0, 0, closed, 0, "no symbols in filtered request");
+      Comment("ChartSelectorLoader ON — filtered list empty");
       return;
      }
 
+   SaveDesiredSymbols(desired);
    RebuildCharts(desired, tf, tpl);
   }
 
 //+------------------------------------------------------------------+
-void StartupResetFromMarketWatch()
+void StartupResetFromDesiredList()
   {
    string desired[];
-   CollectMarketWatchSymbols(desired);
-   if(ArraySize(desired) == 0)
+   if(LoadDesiredSymbolsFile(desired))
      {
-      int closed = CloseAllChartsExceptHost(ChartID());
-      WriteStatus(0, 0, closed, 0, "Market Watch empty on start");
-      Comment("ChartSelectorLoader ON — Market Watch empty");
+      PrintFormat("ChartSelectorLoader: startup from desired_symbols.list (%d symbols)",
+                  ArraySize(desired));
+      RebuildCharts(desired, PERIOD_M1, DEFAULT_TPL);
       return;
      }
-   RebuildCharts(desired, PERIOD_M1, DEFAULT_TPL);
+
+   // Do NOT open full Market Watch — it often still contains disabled classes
+   // locked by leftover charts. Wait for the app to write a filtered list.
+   Comment("ChartSelectorLoader ON — waiting for filtered symbol list from app");
+   Print("ChartSelectorLoader: no desired_symbols.list — not opening Market Watch");
+   WriteStatus(0, 0, 0, 0, "waiting for filtered desired symbols");
   }
 
 //+------------------------------------------------------------------+
@@ -273,8 +329,8 @@ int OnInit()
   {
    FolderCreate("chart_selector");
    g_startup_done = false;
-   Comment("ChartSelectorLoader ON — resetting charts from Market Watch...");
-   Print("ChartSelectorLoader EA started on ", _Symbol, " — initial Market Watch reset");
+   Comment("ChartSelectorLoader ON — loading filtered watchlist...");
+   Print("ChartSelectorLoader EA started on ", _Symbol, " — filtered startup");
    // Short delay so the host chart finishes attaching before we close others.
    EventSetMillisecondTimer(500);
    return INIT_SUCCEEDED;
@@ -292,8 +348,8 @@ void OnTimer()
   {
    WriteHeartbeat();
    // First timer fire after attach: prefer a pending Python request (exact
-   // symbol list) so leftover forex/etc in Market Watch is never opened.
-   // Fall back to Market Watch only when no request file is waiting.
+   // enabled-class list). Else reopen the last filtered desired list.
+   // Never fall back to unfiltered Market Watch on reload.
    if(!g_startup_done)
      {
       g_startup_done = true;
@@ -302,7 +358,7 @@ void OnTimer()
       if(FileIsExist(REQUEST_FILE))
          ProcessRequest();
       else
-         StartupResetFromMarketWatch();
+         StartupResetFromDesiredList();
       return;
      }
    ProcessRequest();

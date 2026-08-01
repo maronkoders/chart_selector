@@ -1,15 +1,19 @@
 """Portfolio Profile — monthly PnL across all broker login profiles."""
 import datetime as dt
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
 from core import mt5_client
 from core.config import load_config, get_active_profile
 from core.portfolio_store import (
+    aggregate_yearly_pnl,
     has_portfolio_data,
     list_months,
+    list_years,
     load_portfolio,
+    months_for_year,
     refresh_active_profile,
     sync_all_profiles,
     table_rows_for_month,
@@ -95,27 +99,70 @@ if not has_data:
     )
     st.stop()
 
-months = list_months(store)
-month_options = ["All"] + months
-# Default to current month when present, else All
-current_month = dt.date.today().strftime("%Y-%m")
-default_index = month_options.index(current_month) if current_month in month_options else 0
+years = list_years(store)
+today = dt.date.today()
+if not years:
+    years = [today.year]
+default_year = today.year if today.year in years else years[0]
 
-selected_month = st.selectbox(
-    "Filter by month",
-    options=month_options,
-    index=default_index,
-    help="Shows closed-trade PnL for the selected month (or lifetime totals for All).",
-)
+year_col, month_col = st.columns(2)
+with year_col:
+    selected_year = st.selectbox(
+        "Filter by year",
+        options=years,
+        index=years.index(default_year),
+        help="Year used for the table month list and the Jan→current combined PnL chart.",
+    )
 
-rows = table_rows_for_month(store, None if selected_month == "All" else selected_month)
+year_months = months_for_year(int(selected_year), through_current=True)
+cached_in_year = [m for m in list_months(store) if m.startswith(f"{selected_year}-")]
+month_options = ["All"] + sorted(set(year_months) | set(cached_in_year))
+current_month = today.strftime("%Y-%m")
+if current_month in month_options and int(selected_year) == today.year:
+    default_month_index = month_options.index(current_month)
+else:
+    default_month_index = 0
+
+with month_col:
+    selected_month = st.selectbox(
+        "Filter by month",
+        options=month_options,
+        index=default_month_index,
+        help="Table shows closed-trade PnL for the selected month (or year totals for All).",
+    )
+
+if selected_month == "All":
+    rows = []
+    for name, entry in sorted((store.get("profiles") or {}).items()):
+        if not isinstance(entry, dict):
+            continue
+        months = entry.get("months") or {}
+        year_stats = [months[k] for k in year_months if k in months]
+        rows.append({
+            "Profile": name,
+            "Login": entry.get("login") or "",
+            "Server": entry.get("server") or "",
+            "Balance": entry.get("balance"),
+            "Equity": entry.get("equity"),
+            "PnL": round(sum(float(m.get("pnl") or 0) for m in year_stats), 4),
+            "Commission": round(sum(float(m.get("commission") or 0) for m in year_stats), 4),
+            "Swap": round(sum(float(m.get("swap") or 0) for m in year_stats), 4),
+            "Net PnL": round(sum(float(m.get("net_pnl") or 0) for m in year_stats), 4),
+            "Trades": sum(int(m.get("trades") or 0) for m in year_stats),
+            "Wins": sum(int(m.get("wins") or 0) for m in year_stats),
+            "Losses": sum(int(m.get("losses") or 0) for m in year_stats),
+            "Updated": entry.get("updated_at") or "",
+            "Error": entry.get("error") or "",
+        })
+else:
+    rows = table_rows_for_month(store, selected_month)
+
 df = pd.DataFrame(rows)
 
 if df.empty:
     st.warning("Cache has no profile rows.")
     st.stop()
 
-# Summary metrics for the filtered view
 total_pnl = float(df["PnL"].fillna(0).sum())
 total_net = float(df["Net PnL"].fillna(0).sum())
 total_trades = int(df["Trades"].fillna(0).sum())
@@ -125,8 +172,8 @@ m2.metric("Trades", total_trades)
 m3.metric("PnL", f"${total_pnl:,.2f}")
 m4.metric("Net PnL", f"${total_net:,.2f}")
 st.caption(
-    f"Filter: **{selected_month}** · PnL = closed deal profit (same as Dashboard). "
-    "Net PnL includes commission + swap."
+    f"Filter: **{selected_year}** / **{selected_month}** · PnL = closed deal profit "
+    "(same as Dashboard). Net PnL includes commission + swap."
 )
 
 display = df[
@@ -147,7 +194,6 @@ display = df[
     ]
 ].copy()
 
-# Format money columns for display while keeping sort via underlying numbers in df
 for col in ("Balance", "Equity", "PnL", "Commission", "Swap", "Net PnL"):
     display[col] = display[col].apply(
         lambda v: "" if v is None or (isinstance(v, float) and pd.isna(v)) else f"${float(v):,.2f}"
@@ -160,3 +206,80 @@ if not errors.empty:
     with st.expander("Profile sync errors"):
         for _, row in errors.iterrows():
             st.write(f"**{row['Profile']}**: {row['Error']}")
+
+st.divider()
+st.subheader(f"Yearly PnL — {selected_year}")
+st.caption(
+    "Combined closed-trade PnL across all broker profiles, January through "
+    + ("the current month." if int(selected_year) == today.year else "December.")
+    + " Values include the negative range (not floored at zero)."
+)
+
+year_rows = aggregate_yearly_pnl(store, int(selected_year), through_current=True)
+chart_df = pd.DataFrame(year_rows)
+
+if chart_df.empty:
+    st.info(f"No month range to plot for {selected_year}.")
+else:
+    y_min = float(min(chart_df["PnL"].min(), chart_df["Cumulative PnL"].min(), 0))
+    y_max = float(max(chart_df["PnL"].max(), chart_df["Cumulative PnL"].max(), 0))
+    pad = max(abs(y_max - y_min) * 0.08, 1.0)
+    y_domain = [y_min - pad, y_max + pad]
+    month_order = list(chart_df["Label"])
+
+    monthly = (
+        alt.Chart(chart_df)
+        .mark_line(point=True, color="#e11d48", strokeWidth=2.5)
+        .encode(
+            x=alt.X(
+                "Label:N",
+                sort=month_order,
+                title="Month",
+                axis=alt.Axis(labelAngle=0),
+            ),
+            y=alt.Y(
+                "PnL:Q",
+                title="Combined PnL ($)",
+                scale=alt.Scale(domain=y_domain, nice=False, zero=False),
+                axis=alt.Axis(format="$,.2f"),
+            ),
+            tooltip=[
+                alt.Tooltip("Month:N", title="Month"),
+                alt.Tooltip("PnL:Q", title="Monthly PnL", format="$,.2f"),
+                alt.Tooltip("Net PnL:Q", title="Net PnL", format="$,.2f"),
+                alt.Tooltip("Trades:Q", title="Trades"),
+                alt.Tooltip("Cumulative PnL:Q", title="YTD PnL", format="$,.2f"),
+            ],
+        )
+    )
+    cumulative = (
+        alt.Chart(chart_df)
+        .mark_line(point=True, color="#38bdf8", strokeWidth=2, strokeDash=[6, 4])
+        .encode(
+            x=alt.X("Label:N", sort=month_order),
+            y=alt.Y("Cumulative PnL:Q", scale=alt.Scale(domain=y_domain, nice=False, zero=False)),
+            tooltip=[
+                alt.Tooltip("Label:N", title="Month"),
+                alt.Tooltip("Cumulative PnL:Q", title="YTD PnL", format="$,.2f"),
+            ],
+        )
+    )
+    zero_line = (
+        alt.Chart(pd.DataFrame({"y": [0.0]}))
+        .mark_rule(color="#94a3b8", strokeDash=[4, 4], strokeWidth=1)
+        .encode(y="y:Q")
+    )
+
+    st.altair_chart(
+        (monthly + cumulative + zero_line).properties(height=360).interactive(),
+        use_container_width=True,
+    )
+
+    c1, c2, c3 = st.columns(3)
+    year_pnl = float(chart_df["PnL"].sum())
+    year_net = float(chart_df["Net PnL"].sum())
+    year_trades = int(chart_df["Trades"].sum())
+    c1.metric(f"{selected_year} combined PnL", f"${year_pnl:,.2f}")
+    c2.metric(f"{selected_year} combined Net PnL", f"${year_net:,.2f}")
+    c3.metric(f"{selected_year} trades", year_trades)
+    st.caption("Solid red = monthly combined PnL · Dashed blue = cumulative YTD PnL · Grey = $0.")

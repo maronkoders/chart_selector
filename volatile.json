@@ -145,7 +145,7 @@
       "ratings": {
         "Boom 1000 Index": "in-between",
         "Boom 300 Index": "very",
-        "Boom 500 Index": "not",
+        "Boom 500 Index": "tiny",
         "Boom 600 Index": "tiny",
         "Boom 900 Index": "in-between",
         "Jump 10 Index": "not",
@@ -167,7 +167,7 @@
         "Volatility 75 Index": "tiny",
         "Volatility 100 Index": "in-between",
         "Volatility 90 Index": "very",
-        "Volatility 5 (1s) Index": "not",
+        "Volatility 5 (1s) Index": "tiny",
         "Volatility 10 (1s) Index": "tiny",
         "Volatility 15 (1s) Index": "tiny",
         "Volatility 25 (1s) Index": "very",
@@ -177,7 +177,12 @@
         "Volatility 75 (1s) Index": "in-between",
         "Volatility 30 (1s) Index": "tiny",
         "Volatility 250 (1s) Index": "not",
-        "Volatility 150 (1s) Index": "not"
+        "Volatility 150 (1s) Index": "not",
+        "Crash 500 Index": "tiny",
+        "Crash 300 Index": "in-between",
+        "Crash 1000 Index": "tiny",
+        "Crash 600 Index": "tiny",
+        "Crash 900 Index": "very"
       }
     }
   }

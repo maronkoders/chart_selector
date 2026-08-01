@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-30T22:52:50",
+  "updated_at": "2026-08-01T13:26:19",
   "profiles": {
     "Main": {
       "login": "100979130",
@@ -68,19 +68,10 @@
     "DerivVU": {
       "login": "101239396",
       "server": "DerivVU-Server-02",
-      "balance": 5.12,
-      "equity": 5.12,
-      "updated_at": "2026-07-30T22:52:50",
+      "balance": 2.49,
+      "equity": 2.05,
+      "updated_at": "2026-08-01T13:25:58",
       "months": {
-        "2026-02": {
-          "pnl": 4.8,
-          "commission": 0.0,
-          "swap": -0.86,
-          "net_pnl": 3.94,
-          "trades": 82,
-          "wins": 36,
-          "losses": 45
-        },
         "2026-03": {
           "pnl": 37.08,
           "commission": 0.0,
@@ -118,13 +109,13 @@
           "losses": 14
         },
         "2026-07": {
-          "pnl": -94.89,
+          "pnl": -97.52,
           "commission": 0.0,
           "swap": -0.28,
-          "net_pnl": -95.17,
-          "trades": 211,
+          "net_pnl": -97.8,
+          "trades": 213,
           "wins": 90,
-          "losses": 120
+          "losses": 122
         }
       },
       "error": null
@@ -242,9 +233,9 @@
     "Weltrade": {
       "login": "34083957",
       "server": "Weltrade-Real",
-      "balance": 0.12,
-      "equity": 0.12,
-      "updated_at": "2026-07-30T22:38:59",
+      "balance": 0.88,
+      "equity": 0.88,
+      "updated_at": "2026-08-01T13:25:13",
       "months": {
         "2025-03": {
           "pnl": -16.96,
@@ -364,13 +355,13 @@
           "losses": 34
         },
         "2026-07": {
-          "pnl": -15.63,
+          "pnl": -17.65,
           "commission": 0.0,
           "swap": -0.47,
-          "net_pnl": -16.1,
-          "trades": 51,
+          "net_pnl": -18.12,
+          "trades": 52,
           "wins": 22,
-          "losses": 27
+          "losses": 28
         }
       },
       "error": null
@@ -428,34 +419,6 @@
       "equity": 0.0,
       "updated_at": "2026-07-20T10:42:46",
       "months": {},
-      "error": null
-    },
-    "Demoe": {
-      "login": "6132229",
-      "server": "Deriv-Demo",
-      "balance": 9161.29,
-      "equity": 9161.29,
-      "updated_at": "2026-07-30T22:51:55",
-      "months": {
-        "2026-06": {
-          "pnl": -9176.07,
-          "commission": 0.0,
-          "swap": -66.5,
-          "net_pnl": -9242.57,
-          "trades": 138,
-          "wins": 57,
-          "losses": 79
-        },
-        "2026-07": {
-          "pnl": -11571.65,
-          "commission": 0.0,
-          "swap": -1.33,
-          "net_pnl": -11572.98,
-          "trades": 511,
-          "wins": 149,
-          "losses": 361
-        }
-      },
       "error": null
     }
   }

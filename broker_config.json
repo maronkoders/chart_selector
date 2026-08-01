@@ -11,7 +11,11 @@
         "bias_filter": true,
         "bias_source": "auto"
       },
-      "trading_plan": "Full-margin"
+      "trading_plan": "Full-margin",
+      "enabled_index_classes": [
+        "Volatility",
+        "Jump"
+      ]
     },
     "DerivBVI": {
       "terminal_path": "",
@@ -105,8 +109,8 @@
   },
   "active_profile": "DerivVU",
   "risk": {
-    "account_size": 9161.29,
-    "risk_percentage": 50.5
+    "account_size": 2.49,
+    "risk_percentage": 50.0
   },
   "trading_plans": {
     "$1 challenge": {

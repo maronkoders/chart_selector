@@ -20,6 +20,7 @@ from core.config import get_active_profile
 CHART_REQUEST_REL = Path("chart_selector") / "open_charts.request"
 CHART_STATUS_REL = Path("chart_selector") / "open_charts.status"
 CHART_HEARTBEAT_REL = Path("chart_selector") / "loader.heartbeat"
+CHART_DESIRED_REL = Path("chart_selector") / "desired_symbols.list"
 CHART_TEMPLATE_NAME = "chart_selector_new_me.tpl"
 LOADER_HEARTBEAT_MAX_AGE_SEC = 5.0
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -318,6 +319,10 @@ def sync_universe_to_market_watch(universe: dict) -> dict:
         if mt5.symbol_select(sym.name, False):
             removed.append(sym.name)
 
+    # Persist the filtered list so ChartSelectorLoader reload does not reopen
+    # leftover Market Watch symbols from disabled index classes.
+    write_desired_symbols(desired)
+
     return {
         "added": added,
         "removed": removed,
@@ -325,6 +330,24 @@ def sync_universe_to_market_watch(universe: dict) -> dict:
         "desired": desired,
         "enabled_classes": sorted(enabled),
     }
+
+
+def write_desired_symbols(symbols: list[str]) -> dict:
+    """Write the filtered enabled-class symbol list for ChartSelectorLoader.
+
+    On EA reload with no pending request, the loader opens this list instead of
+    the full (often dirty) Market Watch.
+    """
+    files_dir = _mt5_files_dir()
+    if files_dir is None:
+        return {"ok": False, "error": "MT5 Files folder unavailable."}
+
+    clean = [str(s).strip() for s in (symbols or []) if str(s).strip()]
+    out_dir = files_dir / "chart_selector"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = files_dir / CHART_DESIRED_REL
+    path.write_text("\n".join(clean) + ("\n" if clean else ""), encoding="utf-8")
+    return {"ok": True, "path": str(path), "count": len(clean)}
 
 
 def _mt5_data_path() -> Path | None:
@@ -419,6 +442,9 @@ def request_watchlist_charts(
     ]
     request_path.write_text("\n".join(body_lines), encoding="ascii", errors="replace")
 
+    # Keep reload list in sync even if the EA is temporarily offline.
+    if not from_market_watch:
+        write_desired_symbols(clean)
     status: dict = {}
     deadline = time.time() + max(0.0, wait_seconds)
     while time.time() < deadline:
