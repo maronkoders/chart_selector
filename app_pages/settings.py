@@ -695,46 +695,76 @@ with tab5:
             hidden = load_hidden_assets(profile_name)
             ratings = load_volatile(profile_name)
             clear_label = "— clear —"
+            unrated_group = "Unrated"
             select_options = [clear_label] + labels
 
-            editor_df = pd.DataFrame(
-                {
-                    "Asset": assets,
-                    "Status": [
-                        "Hidden" if asset in hidden else "Watchlist"
-                        for asset in assets
-                    ],
-                    r"\volatile": [
-                        ratings.get(asset, clear_label)
-                        if ratings.get(asset) in labels
-                        else clear_label
-                        for asset in assets
-                    ],
-                }
-            )
+            # Group assets by their current \\volatile rating (option order).
+            groups: dict[str, list[str]] = {label: [] for label in labels}
+            groups[unrated_group] = []
+            for asset in assets:
+                rating = ratings.get(asset)
+                if rating in labels:
+                    groups[rating].append(asset)
+                else:
+                    groups[unrated_group].append(asset)
 
-            edited_df = st.data_editor(
-                editor_df,
-                hide_index=True,
-                width="stretch",
-                height=min(420, 38 + 35 * max(len(editor_df), 1)),
-                disabled=["Asset", "Status"],
-                column_config={
-                    "Asset": st.column_config.TextColumn("Asset", width="large"),
-                    "Status": st.column_config.TextColumn(
-                        "Status",
-                        help="Watchlist = currently shown · Hidden = bias-hidden (still editable here)",
-                        width="small",
-                    ),
-                    r"\volatile": st.column_config.SelectboxColumn(
-                        r"\volatile",
-                        options=select_options,
-                        required=True,
-                        width="medium",
-                    ),
-                },
-                key=f"settings_volatile_ratings_editor_{profile_key}",
+            column_config = {
+                "Asset": st.column_config.TextColumn("Asset", width="large"),
+                "Status": st.column_config.TextColumn(
+                    "Status",
+                    help="Watchlist = currently shown · Hidden = bias-hidden (still editable here)",
+                    width="small",
+                ),
+                r"\volatile": st.column_config.SelectboxColumn(
+                    r"\volatile",
+                    options=select_options,
+                    required=True,
+                    width="medium",
+                ),
+            }
+
+            edited_frames: list[pd.DataFrame] = []
+            group_order = list(labels) + (
+                [unrated_group] if groups[unrated_group] else []
             )
+            for group_label in group_order:
+                group_assets = groups[group_label]
+                with st.expander(
+                    f"{group_label} · {len(group_assets)} asset(s)",
+                    expanded=False,
+                ):
+                    if not group_assets:
+                        st.caption("No assets in this group yet.")
+                        continue
+
+                    current_rating = (
+                        clear_label if group_label == unrated_group else group_label
+                    )
+                    editor_df = pd.DataFrame(
+                        {
+                            "Asset": group_assets,
+                            "Status": [
+                                "Hidden" if asset in hidden else "Watchlist"
+                                for asset in group_assets
+                            ],
+                            r"\volatile": [current_rating] * len(group_assets),
+                        }
+                    )
+                    # Sanitize key: option labels may contain spaces / punctuation.
+                    group_key = "".join(
+                        ch if ch.isalnum() else "_" for ch in group_label
+                    )
+                    edited_frames.append(
+                        st.data_editor(
+                            editor_df,
+                            hide_index=True,
+                            width="stretch",
+                            height=min(420, 38 + 35 * max(len(editor_df), 1)),
+                            disabled=["Asset", "Status"],
+                            column_config=column_config,
+                            key=f"settings_volatile_ratings_editor_{profile_key}_{group_key}",
+                        )
+                    )
 
             c_save, c_meta = st.columns([1, 2])
             with c_save:
@@ -751,15 +781,16 @@ with tab5:
                 )
 
             if save_ratings:
-                payload = {
-                    str(row["Asset"]): (
-                        ""
-                        if row[r"\volatile"] == clear_label
-                        else str(row[r"\volatile"])
-                    )
-                    for _, row in edited_df.iterrows()
-                    if row.get("Asset")
-                }
+                payload: dict[str, str] = {}
+                for edited_df in edited_frames:
+                    for _, row in edited_df.iterrows():
+                        asset = row.get("Asset")
+                        if not asset:
+                            continue
+                        value = row[r"\volatile"]
+                        payload[str(asset)] = (
+                            "" if value == clear_label else str(value)
+                        )
                 apply_volatile_edits(payload, profile_name=profile_name)
                 st.success(f"Saved \\volatile for {len(payload)} asset(s).")
                 st.rerun()

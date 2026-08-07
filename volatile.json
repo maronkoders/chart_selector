@@ -45,11 +45,11 @@
         "SFX Vol 40": "tiny",
         "SFX Vol 60": "tiny",
         "SFX Vol 80": "in-between",
-        "SFX Vol 99": "not",
+        "SFX Vol 99": "tiny",
         "FlipX 1": "not",
         "FlipX 2": "not",
         "FlipX 3": "not",
-        "FlipX 4": "not",
+        "FlipX 4": "tiny",
         "FlipX 5": "tiny"
       }
     },
@@ -124,22 +124,22 @@
         {
           "label": "not",
           "operator": "<=",
-          "scale": 100.0
+          "scale": 4.0
         },
         {
           "label": "tiny",
           "operator": "<=",
-          "scale": 300.0
+          "scale": 32.0
         },
         {
           "label": "in-between",
           "operator": "<=",
-          "scale": 1000.0
+          "scale": 256.0
         },
         {
           "label": "very",
           "operator": ">",
-          "scale": 1001.0
+          "scale": 257.0
         }
       ],
       "ratings": {
@@ -148,7 +148,7 @@
         "Boom 500 Index": "tiny",
         "Boom 600 Index": "tiny",
         "Boom 900 Index": "in-between",
-        "Jump 10 Index": "not",
+        "Jump 10 Index": "tiny",
         "Jump 25 Index": "in-between",
         "Jump 50 Index": "very",
         "Jump 75 Index": "very",
@@ -158,18 +158,18 @@
         "Step Index 300": "very",
         "Step Index 400": "very",
         "Step Index 500": "very",
-        "Volatility 5 Index": "not",
-        "Volatility 10 Index": "not",
-        "Volatility 15 Index": "tiny",
-        "Volatility 25 Index": "not",
+        "Volatility 5 Index": "tiny",
+        "Volatility 10 Index": "tiny",
+        "Volatility 15 Index": "in-between",
+        "Volatility 25 Index": "in-between",
         "Volatility 30 Index": "very",
-        "Volatility 50 Index": "not",
+        "Volatility 50 Index": "tiny",
         "Volatility 75 Index": "tiny",
         "Volatility 100 Index": "in-between",
         "Volatility 90 Index": "very",
         "Volatility 5 (1s) Index": "tiny",
         "Volatility 10 (1s) Index": "tiny",
-        "Volatility 15 (1s) Index": "tiny",
+        "Volatility 15 (1s) Index": "in-between",
         "Volatility 25 (1s) Index": "very",
         "Volatility 50 (1s) Index": "very",
         "Volatility 90 (1s) Index": "very",

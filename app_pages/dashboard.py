@@ -12,11 +12,16 @@ from core.config import load_config, get_profile_plan, calculate_plan_progress, 
 from core.plan_frequency import build_week_targets_for_grid
 from core.hidden_assets_store import load_hidden_assets
 from core.page_load_monitor import page_bootstrap, recent_visits, summary_table_rows
-from core.sl_risk import max_cash_at_risk
+from core.sl_risk import max_cash_at_risk, max_cash_at_target
 import importlib
 
 # Streamlit can keep a stale mt5_client after new helpers are added; refresh if needed.
-if not hasattr(mt5_client, "apply_suggested_sls") or not hasattr(mt5_client, "modify_position_sltp"):
+if (
+    not hasattr(mt5_client, "apply_suggested_sls")
+    or not hasattr(mt5_client, "apply_suggested_tps")
+    or not hasattr(mt5_client, "modify_position_sltp")
+    or not hasattr(mt5_client, "balance_ops_totals")
+):
     mt5_client = importlib.reload(mt5_client)
 
 st.title("📊 Dashboard")
@@ -121,6 +126,7 @@ else:
     st.caption("No page-load timings recorded yet — visit a few pages to populate the log.")
 
 active_plan_data = None  # populated below if the active profile has a linked plan
+active_plan_name = None
 
 if account:
     m1, m2, m3, m4, m5 = st.columns(5)
@@ -137,6 +143,7 @@ if account:
     if active_profile_name:
         plan_name, plan_data = get_profile_plan(cfg, active_profile_name)
         if plan_name and plan_data:
+            active_plan_name = plan_name
             active_plan_data = plan_data
             # Fetch trade history for current month for automatic tracking
             today = dt.date.today()
@@ -155,11 +162,13 @@ if account:
             with col3:
                 st.page_link("app_pages/trading_plan.py", label="View Plan →", icon="📊")
             
-            # Display "Day X, Y days to final target" format - bold and centered
-            if progress['current_day'] > 0:
-                st.markdown(f"<div style='text-align: center;'><strong>Day {progress['current_day']}, {progress['remaining_days']} days to get to '${progress['final_balance']:,.2f}'</strong></div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div style='text-align: center;'><strong>Plan starts on {progress['start_date'].strftime('%B %d, %Y')}</strong></div>", unsafe_allow_html=True)
+            # Day N = Nth target reached (Day 0 = still below Day 1 target)
+            st.markdown(
+                f"<div style='text-align: center;'><strong>"
+                f"Day {progress['current_day']}, {progress['remaining_days']} days to get to "
+                f"'${progress['final_balance']:,.2f}'</strong></div>",
+                unsafe_allow_html=True,
+            )
             
             # Progress bar
             progress_percent = (progress['current_day'] / progress['total_days']) * 100 if progress['total_days'] > 0 else 0
@@ -169,11 +178,11 @@ else:
 
 st.divider()
 
-st.subheader("Risk & SL Picker")
+st.subheader("Risk & SL / TP Picker")
 st.caption(
-    "Stop-loss sizing from your risk tolerance. Max cash at risk is split "
-    "equally across open positions; each share converts to SL points via the "
-    "symbol's tick value. SL Cash across all positions sums to Max Cash at Risk."
+    "Stop-loss sizing from your risk tolerance; take-profit sizing from the "
+    "active profile's trading-plan daily TP%. Each budget is split equally "
+    "across open positions and converted to points via the symbol's tick value."
 )
 
 live_balance = float(account["balance"]) if account else float(cfg["risk"]["account_size"])
@@ -190,31 +199,61 @@ if live_balance != cfg["risk"]["account_size"] or risk_percentage != cfg["risk"]
     st.session_state["app_config"] = cfg
 
 max_risk = round(max_cash_at_risk(live_balance, risk_percentage), 2)
-r1, r2, r3 = st.columns(3)
+plan_tp_pct = float(active_plan_data["tp_percentage"]) if active_plan_data else None
+max_target = (
+    round(max_cash_at_target(live_balance, plan_tp_pct), 2) if plan_tp_pct is not None else None
+)
+
+r1, r2, r3, r4 = st.columns(4)
 r1.metric("Account Balance", f"${live_balance:,.2f}")
 r2.metric("Risk Tolerance", f"{risk_percentage:.1f}%")
 r3.metric("Max Cash at Risk", f"${max_risk:,.2f}")
+if max_target is not None:
+    r4.metric(
+        "Daily TP Target",
+        f"${max_target:,.2f}",
+        help=f"From plan “{active_plan_name}” at {plan_tp_pct:.1f}% of balance.",
+    )
+else:
+    r4.metric("Daily TP Target", "—")
+    st.caption("Link a trading plan to the active profile to enable Suggested TP.")
 
 st.subheader("Open Positions")
-positions_df = mt5_client.get_open_positions_with_sl_df(max_risk)
+positions_df = mt5_client.get_open_positions_with_sl_df(max_risk, max_target_cash=max_target)
 if positions_df.empty:
     st.info("No open positions.")
 else:
     header_l, header_r = st.columns([3, 2])
     with header_l:
-        st.caption("Suggested SL is calculated from your risk budget — apply it to MT5 below.")
+        st.caption("Suggested SL/TP are calculated from your budgets — apply them to MT5 below.")
     with header_r:
-        apply_all = st.button(
-            "Apply All Suggested SLs",
-            type="primary",
-            width="stretch",
-            key="apply_all_suggested_sl",
-            help="Writes each Suggested SL onto the matching open MT5 position (keeps existing TP).",
-        )
+        btn_sl, btn_tp = st.columns(2)
+        with btn_sl:
+            apply_all_sl = st.button(
+                "Apply All SLs",
+                type="primary",
+                width="stretch",
+                key="apply_all_suggested_sl",
+                help="Writes each Suggested SL onto the matching open MT5 position (keeps existing TP).",
+            )
+        with btn_tp:
+            apply_all_tp = st.button(
+                "Apply All TPs",
+                type="primary",
+                width="stretch",
+                key="apply_all_suggested_tp",
+                disabled=max_target is None or "Suggested TP" not in positions_df.columns,
+                help="Writes each Suggested TP onto the matching open MT5 position (keeps existing SL).",
+            )
 
-    if apply_all:
+    if apply_all_sl:
         with st.spinner("Applying suggested stop-losses on MT5…"):
             st.session_state["last_sl_apply"] = mt5_client.apply_suggested_sls(positions_df)
+        st.rerun()
+
+    if apply_all_tp:
+        with st.spinner("Applying suggested take-profits on MT5…"):
+            st.session_state["last_tp_apply"] = mt5_client.apply_suggested_tps(positions_df)
         st.rerun()
 
     last_apply = st.session_state.pop("last_sl_apply", None)
@@ -228,40 +267,78 @@ else:
         for item in last_apply.get("results") or []:
             st.caption(item["message"])
 
+    last_tp_apply = st.session_state.pop("last_tp_apply", None)
+    if last_tp_apply:
+        if last_tp_apply["failed"] == 0:
+            st.success(f"Applied Suggested TP on {last_tp_apply['ok']} position(s).")
+        elif last_tp_apply["ok"] == 0:
+            st.error("Failed to apply Suggested TP on any position.")
+        else:
+            st.warning(f"Applied {last_tp_apply['ok']} · failed {last_tp_apply['failed']}.")
+        for item in last_tp_apply.get("results") or []:
+            st.caption(item["message"])
+
     st.dataframe(positions_df, hide_index=True, width="stretch")
     total_open_profit = positions_df["Profit"].sum()
     total_sl_cash = float(positions_df["SL Cash"].sum())
-    st.caption(
+    caption = (
         f"Total floating P/L across {len(positions_df)} position(s): ${total_open_profit:,.2f} · "
         f"SL Cash total: ${total_sl_cash:,.2f} (budget ${max_risk:,.2f})"
     )
+    if max_target is not None and "TP Cash" in positions_df.columns:
+        total_tp_cash = float(positions_df["TP Cash"].sum())
+        caption += f" · TP Cash total: ${total_tp_cash:,.2f} (budget ${max_target:,.2f})"
+    st.caption(caption)
 
     st.markdown("**Apply per position**")
     for _, row in positions_df.iterrows():
         ticket = int(row["Ticket"])
-        suggested = float(row["Suggested SL"])
+        suggested_sl = float(row["Suggested SL"])
+        suggested_tp = float(row["Suggested TP"]) if "Suggested TP" in row and pd.notna(row.get("Suggested TP")) else 0.0
         symbol = str(row["Symbol"])
-        col_a, col_b, col_c = st.columns([3, 2, 2])
+        col_a, col_b, col_c, col_d = st.columns([3, 2, 1.5, 1.5])
         with col_a:
-            st.write(
+            sl_cash = float(row["SL Cash"])
+            line = (
                 f"`#{ticket}` · {symbol} · {row['Type']} · "
-                f"Suggested SL **{suggested}** (cash ${float(row['SL Cash']):,.2f})"
+                f"SL **{suggested_sl}** (${sl_cash:,.2f})"
             )
+            if "TP Cash" in row and pd.notna(row.get("TP Cash")):
+                line += f" · TP **{suggested_tp}** (${float(row['TP Cash']):,.2f})"
+            st.write(line)
         with col_b:
             current_sl = float(row["SL"] or 0)
-            st.caption(f"Current SL: {current_sl if current_sl else '—'}")
+            current_tp = float(row["TP"] or 0)
+            st.caption(
+                f"Current SL: {current_sl if current_sl else '—'} · "
+                f"TP: {current_tp if current_tp else '—'}"
+            )
         with col_c:
             if st.button(
                 "Apply SL",
                 key=f"apply_sl_{ticket}",
                 width="stretch",
-                disabled=suggested <= 0,
+                disabled=suggested_sl <= 0,
             ):
-                ok, msg = mt5_client.modify_position_sltp(ticket, suggested, symbol=symbol)
+                ok, msg = mt5_client.modify_position_sltp(ticket, sl=suggested_sl, symbol=symbol)
                 st.session_state["last_sl_apply"] = {
                     "ok": 1 if ok else 0,
                     "failed": 0 if ok else 1,
-                    "results": [{"ticket": ticket, "ok": ok, "message": msg, "sl": suggested}],
+                    "results": [{"ticket": ticket, "ok": ok, "message": msg, "sl": suggested_sl}],
+                }
+                st.rerun()
+        with col_d:
+            if st.button(
+                "Apply TP",
+                key=f"apply_tp_{ticket}",
+                width="stretch",
+                disabled=suggested_tp <= 0,
+            ):
+                ok, msg = mt5_client.modify_position_sltp(ticket, tp=suggested_tp, symbol=symbol)
+                st.session_state["last_tp_apply"] = {
+                    "ok": 1 if ok else 0,
+                    "failed": 0 if ok else 1,
+                    "results": [{"ticket": ticket, "ok": ok, "message": msg, "tp": suggested_tp}],
                 }
                 st.rerun()
 
@@ -353,6 +430,16 @@ if daily_stats:
     st.caption(f"Day win rate: {day_win_rate:.1f}% ({win_days}/{traded_days} traded days)")
 else:
     st.caption("No closed trades in this month yet.")
+
+bal_ops = mt5_client.balance_ops_totals(deals_df)
+d1, d2, d3 = st.columns(3)
+d1.metric("Deposits This Month", f"${bal_ops['deposits']:,.2f}")
+d2.metric("Withdrawals This Month", f"${bal_ops['withdrawals']:,.2f}")
+d3.metric("Net Deposits", f"${bal_ops['net']:,.2f}")
+if bal_ops["count"]:
+    st.caption(f"{bal_ops['count']} balance operation(s) in {month_label}.")
+else:
+    st.caption(f"No deposits or withdrawals in {month_label}.")
 
 st.divider()
 

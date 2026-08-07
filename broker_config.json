@@ -109,17 +109,17 @@
   },
   "active_profile": "DerivVU",
   "risk": {
-    "account_size": 2.49,
+    "account_size": 11.0,
     "risk_percentage": 50.0
   },
   "trading_plans": {
     "$1 challenge": {
-      "start_capital": 1.0,
+      "start_capital": 100.0,
       "trading_days": 10,
       "tp_percentage": 100.0,
-      "start_date": "2026-07-01",
+      "start_date": "2026-08-02",
       "challenge_duration": 1,
-      "linked_profile": "Main"
+      "linked_profile": null
     },
     "40%": {
       "start_capital": 10.0,

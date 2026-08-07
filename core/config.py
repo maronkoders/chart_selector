@@ -163,20 +163,22 @@ def calculate_plan_progress(plan: dict, current_balance: float = None, trade_his
     if not start_date:
         start_date = dt.date.today()
     
-    current_day = 1
-    if current_balance and current_balance > 0:
-        if current_balance >= start_capital:
-            growth_factor = 1 + tp_percentage / 100
-            if growth_factor > 1:
-                current_day = math.log(current_balance / start_capital, growth_factor)
-                current_day = max(1, min(round(current_day), trading_days))
-            else:
-                current_day = 1
-        else:
-            current_day = 1
-    
-    expected_balance = start_capital * ((1 + tp_percentage / 100) ** current_day)
-    final_balance = start_capital * ((1 + tp_percentage / 100) ** trading_days)
+    # Day N means the Day-N target has been reached:
+    # start * growth^N <= balance < start * growth^(N+1).
+    # e.g. $1 start @ 100% TP → Day 1 is [$2, $4), Day 2 is [$4, $8), etc.
+    # Day 0 = still below the first target (including below start capital).
+    growth_factor = 1 + tp_percentage / 100
+    current_day = 0
+    if current_balance and current_balance > 0 and growth_factor > 1 and start_capital > 0:
+        ratio = current_balance / start_capital
+        if ratio >= growth_factor:
+            # Floor log maps balance into completed-day bands; epsilon
+            # keeps exact milestone balances (e.g. $4.00) on the higher day.
+            current_day = math.floor(math.log(ratio, growth_factor) + 1e-12)
+            current_day = max(0, min(current_day, trading_days))
+
+    expected_balance = start_capital * (growth_factor ** current_day)
+    final_balance = start_capital * (growth_factor ** trading_days)
     remaining_days = max(0, trading_days - current_day)
     
     return {

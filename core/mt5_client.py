@@ -649,11 +649,16 @@ def get_open_positions_df() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def get_open_positions_with_sl_df(max_risk_cash: float) -> pd.DataFrame:
-    """Open positions enriched with risk-based SL cash, points, and price.
+def get_open_positions_with_sl_df(
+    max_risk_cash: float,
+    max_target_cash: float | None = None,
+) -> pd.DataFrame:
+    """Open positions enriched with risk-based SL and optional plan-based TP.
 
     *max_risk_cash* is split equally across positions so their SL Cash values
-    sum to the risk budget. Points use each symbol's tick value / tick size.
+    sum to the risk budget. When *max_target_cash* is set (from the active
+    profile's trading-plan daily TP%), TP Cash / Suggested TP are attached the
+    same way on the favorable side. Points use each symbol's tick value / size.
     """
     from core.sl_risk import build_position_sl_rows
 
@@ -690,17 +695,31 @@ def get_open_positions_with_sl_df(max_risk_cash: float) -> pd.DataFrame:
             "digits": digits,
         })
 
-    enriched = build_position_sl_rows(raw, float(max_risk_cash))
+    enriched = build_position_sl_rows(
+        raw,
+        float(max_risk_cash),
+        max_target=None if max_target_cash is None else float(max_target_cash),
+    )
     display_cols = [
         "Ticket", "Symbol", "Type", "Volume", "Open Price", "Current Price",
-        "SL", "Suggested SL", "SL Points", "SL Cash", "TP", "Profit", "Open Time",
+        "SL", "Suggested SL", "SL Points", "SL Cash",
+        "TP", "Suggested TP", "TP Points", "TP Cash",
+        "Profit", "Open Time",
     ]
     df = pd.DataFrame(enriched)
     return df[[c for c in display_cols if c in df.columns]]
 
 
-def modify_position_sltp(ticket: int, sl: float, tp: float | None = None, symbol: str | None = None) -> tuple[bool, str]:
-    """Set stop-loss (and optionally TP) on an open position via TRADE_ACTION_SLTP."""
+def modify_position_sltp(
+    ticket: int,
+    sl: float | None = None,
+    tp: float | None = None,
+    symbol: str | None = None,
+) -> tuple[bool, str]:
+    """Set SL and/or TP on an open position via TRADE_ACTION_SLTP.
+
+    Pass ``sl=None`` / ``tp=None`` to keep the position's existing value.
+    """
     positions = mt5.positions_get(ticket=ticket)
     if not positions:
         return False, f"Position #{ticket} not found."
@@ -710,7 +729,10 @@ def modify_position_sltp(ticket: int, sl: float, tp: float | None = None, symbol
     info = mt5.symbol_info(symbol)
     digits = int(getattr(info, "digits", 5) or 5) if info else 5
 
-    sl_price = round(float(sl), digits)
+    if sl is None:
+        sl_price = float(pos.sl or 0.0)
+    else:
+        sl_price = round(float(sl), digits)
     if tp is None:
         tp_price = float(pos.tp or 0.0)
     else:
@@ -731,7 +753,13 @@ def modify_position_sltp(ticket: int, sl: float, tp: float | None = None, symbol
         comment = getattr(result, "comment", "") or ""
         return False, f"#{ticket}: {result.retcode} {comment}".strip()
 
-    return True, f"#{ticket}: SL set to {sl_price}"
+    parts: list[str] = []
+    if sl is not None:
+        parts.append(f"SL={sl_price}")
+    if tp is not None:
+        parts.append(f"TP={tp_price}")
+    detail = ", ".join(parts) if parts else "SLTP unchanged"
+    return True, f"#{ticket}: {detail}"
 
 
 def apply_suggested_sls(rows: list[dict] | pd.DataFrame) -> dict:
@@ -767,8 +795,51 @@ def apply_suggested_sls(rows: list[dict] | pd.DataFrame) -> dict:
             results.append({"ticket": int(ticket), "ok": False, "message": "Suggested SL is zero / unset"})
             continue
 
-        ok, msg = modify_position_sltp(int(ticket), sl_val, tp=None, symbol=symbol)
+        ok, msg = modify_position_sltp(int(ticket), sl=sl_val, tp=None, symbol=symbol)
         results.append({"ticket": int(ticket), "ok": ok, "message": msg, "sl": sl_val})
+        if ok:
+            ok_count += 1
+        else:
+            fail_count += 1
+
+    return {"ok": ok_count, "failed": fail_count, "results": results}
+
+
+def apply_suggested_tps(rows: list[dict] | pd.DataFrame) -> dict:
+    """Apply Suggested TP from each row onto the matching MT5 open position.
+
+    Keeps each position's existing SL. Returns {ok, failed, results}.
+    """
+    if isinstance(rows, pd.DataFrame):
+        records = rows.to_dict(orient="records")
+    else:
+        records = list(rows or [])
+
+    results: list[dict] = []
+    ok_count = 0
+    fail_count = 0
+
+    for row in records:
+        ticket = row.get("Ticket")
+        suggested = row.get("Suggested TP")
+        symbol = row.get("Symbol")
+        if ticket is None or suggested is None:
+            fail_count += 1
+            results.append({"ticket": ticket, "ok": False, "message": "Missing ticket or Suggested TP"})
+            continue
+        try:
+            tp_val = float(suggested)
+        except (TypeError, ValueError):
+            fail_count += 1
+            results.append({"ticket": ticket, "ok": False, "message": f"Invalid Suggested TP: {suggested}"})
+            continue
+        if tp_val <= 0:
+            fail_count += 1
+            results.append({"ticket": int(ticket), "ok": False, "message": "Suggested TP is zero / unset"})
+            continue
+
+        ok, msg = modify_position_sltp(int(ticket), sl=None, tp=tp_val, symbol=symbol)
+        results.append({"ticket": int(ticket), "ok": ok, "message": msg, "tp": tp_val})
         if ok:
             ok_count += 1
         else:
@@ -813,6 +884,7 @@ def get_history_deals_df(from_date, to_date) -> pd.DataFrame:
             "Time": pd.to_datetime(d.time, unit="s"),
             "Symbol": d.symbol,
             "Type": _deal_position_direction(d),
+            "DealType": int(d.type),
             "Volume": d.volume,
             "Price": d.price,
             "Profit": d.profit,
@@ -821,3 +893,29 @@ def get_history_deals_df(from_date, to_date) -> pd.DataFrame:
             "Entry": d.entry,  # 0 = IN (open), 1 = OUT (close), 2 = INOUT, 3 = OUT_BY
         })
     return pd.DataFrame(rows)
+
+
+def balance_ops_totals(deals_df: pd.DataFrame) -> dict:
+    """Sum deposits and withdrawals from DEAL_TYPE_BALANCE rows.
+
+    Positive profit = deposit; negative = withdrawal (reported as a positive total).
+    Returns {deposits, withdrawals, net, count}.
+    """
+    empty = {"deposits": 0.0, "withdrawals": 0.0, "net": 0.0, "count": 0}
+    if deals_df is None or deals_df.empty or "DealType" not in deals_df.columns:
+        return empty
+
+    balance_type = int(getattr(mt5, "DEAL_TYPE_BALANCE", 2))
+    bal = deals_df[deals_df["DealType"] == balance_type]
+    if bal.empty:
+        return empty
+
+    profits = bal["Profit"].astype(float)
+    deposits = float(profits[profits > 0].sum())
+    withdrawals = float((-profits[profits < 0]).sum())
+    return {
+        "deposits": round(deposits, 2),
+        "withdrawals": round(withdrawals, 2),
+        "net": round(deposits - withdrawals, 2),
+        "count": int(len(bal)),
+    }

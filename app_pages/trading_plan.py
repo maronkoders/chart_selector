@@ -275,11 +275,12 @@ with tab2:
                 st.divider()
                 st.markdown(f"**Plan Progress for {plan_name}:**")
                 
-                # Display "Day X, Y days to final target" format
-                if progress['current_day'] > 0:
-                    st.info(f"**Day {progress['current_day']}, {progress['remaining_days']} days to get to '${progress['final_balance']:,.2f}'**", icon="🎯")
-                else:
-                    st.info(f"**Plan starts on {progress['start_date'].strftime('%B %d, %Y')}**", icon="📅")
+                # Day N = Nth target reached (Day 0 = still below Day 1 target)
+                st.info(
+                    f"**Day {progress['current_day']}, {progress['remaining_days']} days to get to "
+                    f"'${progress['final_balance']:,.2f}'**",
+                    icon="🎯",
+                )
                 
                 col1, col2, col3, col4 = st.columns(4)
                 col1.metric("Current Day", f"{progress['current_day']}/{progress['total_days']}")
