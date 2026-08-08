@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-07T17:08:30",
+  "updated_at": "2026-08-07T19:53:49",
   "profiles": {
     "Main": {
       "login": "100979130",
@@ -68,9 +68,9 @@
     "DerivVU": {
       "login": "101239396",
       "server": "DerivVU-Server-02",
-      "balance": 11.0,
-      "equity": 11.0,
-      "updated_at": "2026-08-07T17:08:29",
+      "balance": 10.0,
+      "equity": 10.0,
+      "updated_at": "2026-08-07T19:53:49",
       "months": {
         "2026-03": {
           "pnl": 37.08,
@@ -118,12 +118,12 @@
           "losses": 122
         },
         "2026-08": {
-          "pnl": -11.94,
+          "pnl": -1.89,
           "commission": 0.0,
           "swap": -0.09,
-          "net_pnl": -12.03,
-          "trades": 33,
-          "wins": 14,
+          "net_pnl": -1.98,
+          "trades": 34,
+          "wins": 15,
           "losses": 19
         }
       },

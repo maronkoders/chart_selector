@@ -2,21 +2,27 @@
 //|                                         ChartSelectorLoader.mq5  |
 //|                                         Infynite Solutions        |
 //|  Expert Advisor: reset charts to the app's filtered watchlist,   |
-//|  each opened on M1 with the new_me indicator template.           |
+//|  each opened on M1 with the EMA_Ribbon_Bias_M1_M5 indicator.     |
 //|                                                                   |
 //|  Setup (once):                                                    |
-//|    1. Compile this file in MetaEditor (F7)                        |
-//|    2. Navigator > Expert Advisors > new_me > ChartSelectorLoader  |
-//|    3. Drag it onto ANY one chart and leave it running             |
+//|    1. Compile EMA_Ribbon_Bias_M1_M5.mq5 into MQL5\Indicators     |
+//|    2. Compile this file in MetaEditor (F7)                        |
+//|    3. Navigator > Expert Advisors > new_me > ChartSelectorLoader  |
+//|    4. Drag it onto ANY one chart and leave it running             |
 //|                                                                   |
 //|  On start / on each Python request:                               |
 //|    close every other chart, then open ONLY the filtered symbol    |
-//|    list from the app (enabled index classes). Never open the      |
-//|    full unfiltered Market Watch on reload.                        |
+//|    list from the app (enabled index classes) and attach the       |
+//|    ribbon bias indicator to each one. Never open the full         |
+//|    unfiltered Market Watch on reload.                             |
+//|                                                                   |
+//|  The legacy chart_selector_new_me.tpl template is OFF by default: |
+//|  it also loads the old exporter, which overwrites the same        |
+//|  asset_snapshot_*.json the ribbon indicator writes.               |
 //+------------------------------------------------------------------+
 #property copyright   "Infynite Solutions"
-#property version     "1.30"
-#property description "Closes open charts, then opens enabled-class watchlist charts with new_me"
+#property version     "1.40"
+#property description "Closes open charts, then opens watchlist charts with EMA_Ribbon_Bias_M1_M5"
 #property strict
 
 #define REQUEST_FILE   "chart_selector\\open_charts.request"
@@ -25,6 +31,18 @@
 #define DESIRED_FILE   "chart_selector\\desired_symbols.list"
 #define DEFAULT_TPL    "chart_selector_new_me.tpl"
 #define POLL_SECONDS   1
+
+input group "=== Watchlist chart indicator ==="
+input string InpIndicatorName   = "EMA_Ribbon_Bias_M1_M5"; // Path under MQL5\Indicators (no .ex5)
+input bool   InpAttachIndicator = true;   // Attach the indicator to every opened chart
+input bool   InpIndicatorOnHost = true;   // Also attach it to this EA's own chart
+
+input group "=== Legacy template ==="
+input bool   InpApplyTemplate   = false;  // Apply chart_selector_new_me.tpl (loads the old exporter)
+
+// Matches IndicatorSetString(INDICATOR_SHORTNAME) in EMA_Ribbon_Bias_M1_M5.mq5.
+// Compared as a prefix so the "(M1->M5)" suffix cannot break detection.
+#define RIBBON_SHORTNAME "EMA Ribbon Bias"
 
 bool g_startup_done = false;
 
@@ -89,7 +107,7 @@ ENUM_TIMEFRAMES ParseTimeframe(const string tf)
 
 //+------------------------------------------------------------------+
 void WriteStatus(const int opened, const int updated, const int closed,
-                 const int skipped, const string error)
+                 const int skipped, const string error, const int indicators = 0)
   {
    FolderCreate("chart_selector");
    int h = FileOpen(STATUS_FILE, FILE_WRITE|FILE_TXT|FILE_ANSI);
@@ -100,6 +118,7 @@ void WriteStatus(const int opened, const int updated, const int closed,
    FileWriteString(h, "updated=" + IntegerToString(updated) + "\n");
    FileWriteString(h, "closed=" + IntegerToString(closed) + "\n");
    FileWriteString(h, "skipped=" + IntegerToString(skipped) + "\n");
+   FileWriteString(h, "indicators=" + IntegerToString(indicators) + "\n");
    FileWriteString(h, "error=" + error + "\n");
    FileWriteString(h, "ts=" + TimeToString(TimeLocal(), TIME_DATE|TIME_SECONDS) + "\n");
    FileClose(h);
@@ -218,13 +237,65 @@ bool LoadDesiredSymbolsFile(string &desired[])
   }
 
 //+------------------------------------------------------------------+
+bool ChartHasRibbon(const long chart_id)
+  {
+   int total = ChartIndicatorsTotal(chart_id, 0);
+   for(int i = 0; i < total; i++)
+     {
+      if(StringFind(ChartIndicatorName(chart_id, 0, i), RIBBON_SHORTNAME) == 0)
+         return true;
+     }
+   return false;
+  }
+
+//+------------------------------------------------------------------+
+//| Attach EMA_Ribbon_Bias_M1_M5 to a chart's main window.           |
+//| The handle is built from the chart's own symbol/period, since a  |
+//| template may have changed either one after the chart was opened. |
+//+------------------------------------------------------------------+
+bool AttachRibbonIndicator(const long chart_id, string &err)
+  {
+   if(!InpAttachIndicator)
+      return false;
+
+   if(ChartHasRibbon(chart_id))
+      return true;   // already on the chart (e.g. carried in by a template)
+
+   string          sym = ChartSymbol(chart_id);
+   ENUM_TIMEFRAMES tf  = ChartPeriod(chart_id);
+   if(sym == "")
+     {
+      err = "ChartSymbol empty for chart " + IntegerToString(chart_id);
+      return false;
+     }
+
+   int handle = iCustom(sym, tf, InpIndicatorName);
+   if(handle == INVALID_HANDLE)
+     {
+      err = "iCustom failed err=" + IntegerToString(GetLastError())
+            + " indicator=" + InpIndicatorName + " symbol=" + sym
+            + " (compile it into MQL5\\Indicators)";
+      return false;
+     }
+
+   bool added = ChartIndicatorAdd(chart_id, 0, handle);
+   if(!added)
+      err = "ChartIndicatorAdd failed err=" + IntegerToString(GetLastError())
+            + " indicator=" + InpIndicatorName + " symbol=" + sym;
+
+   // The chart keeps its own reference once added; drop ours either way.
+   IndicatorRelease(handle);
+   return added;
+  }
+
+//+------------------------------------------------------------------+
 void RebuildCharts(string &desired[], const ENUM_TIMEFRAMES tf, const string tpl)
   {
    long host_chart = ChartID();
    int closed = CloseAllChartsExceptHost(host_chart);
    Sleep(300);
 
-   int opened = 0, skipped = 0;
+   int opened = 0, skipped = 0, attached = 0;
    string err = "";
 
    for(int i = 0; i < ArraySize(desired); i++)
@@ -246,22 +317,41 @@ void RebuildCharts(string &desired[], const ENUM_TIMEFRAMES tf, const string tpl
         }
       Sleep(200);
 
-      if(!ChartApplyTemplate(chart_id, tpl))
+      // Template is optional — it also loads the legacy exporter, which
+      // fights the ribbon indicator over asset_snapshot_*.json.
+      if(InpApplyTemplate && !ChartApplyTemplate(chart_id, tpl))
         {
          err = "ChartApplyTemplate failed err=" + IntegerToString(GetLastError())
                + " tpl=" + tpl + " symbol=" + sym;
         }
+
+      string attach_err = "";
+      if(AttachRibbonIndicator(chart_id, attach_err))
+         attached++;
+      else if(attach_err != "")
+         err = attach_err;
+
       ChartRedraw(chart_id);
       opened++;
       Sleep(80);
      }
 
-   WriteStatus(opened, 0, closed, skipped, err);
+   // Keep the controller chart in sync with the watchlist charts.
+   if(InpAttachIndicator && InpIndicatorOnHost)
+     {
+      string host_err = "";
+      if(AttachRibbonIndicator(host_chart, host_err))
+         attached++;
+      else if(host_err != "" && err == "")
+         err = host_err;
+     }
+
+   WriteStatus(opened, 0, closed, skipped, err, attached);
    Comment(StringFormat(
-      "ChartSelectorLoader ON — closed %d, opened %d enabled-class chart(s)",
-      closed, opened));
-   PrintFormat("ChartSelectorLoader: closed=%d opened=%d skipped=%d err=%s",
-               closed, opened, skipped, err);
+      "ChartSelectorLoader ON — closed %d, opened %d chart(s), %d with ribbon bias",
+      closed, opened, attached));
+   PrintFormat("ChartSelectorLoader: closed=%d opened=%d attached=%d skipped=%d err=%s",
+               closed, opened, attached, skipped, err);
   }
 
 //+------------------------------------------------------------------+
@@ -319,9 +409,17 @@ void StartupResetFromDesiredList()
 
    // Do NOT open full Market Watch — it often still contains disabled classes
    // locked by leftover charts. Wait for the app to write a filtered list.
+   int attached = 0;
+   if(InpAttachIndicator && InpIndicatorOnHost)
+     {
+      string host_err = "";
+      if(AttachRibbonIndicator(ChartID(), host_err))
+         attached++;
+     }
+
    Comment("ChartSelectorLoader ON — waiting for filtered symbol list from app");
    Print("ChartSelectorLoader: no desired_symbols.list — not opening Market Watch");
-   WriteStatus(0, 0, 0, 0, "waiting for filtered desired symbols");
+   WriteStatus(0, 0, 0, 0, "waiting for filtered desired symbols", attached);
   }
 
 //+------------------------------------------------------------------+

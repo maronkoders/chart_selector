@@ -75,7 +75,7 @@ def apply_bias_filter(
     trigger: str = "manual",
 ) -> dict:
     """Re-read MQL5 bias snapshots and rebuild hidden_assets / asset_directions."""
-    result = filter_assets_from_exports(asset_data, allow_live_mt5=True)
+    result = filter_assets_from_exports(asset_data, allow_live_mt5=False)
     eligible = set(result.get("eligible_assets", []))
     next_hidden_assets = set()
     for row in asset_data:
@@ -397,8 +397,9 @@ hidden_assets = init_hidden_assets(profile_name)
 st.subheader("Watchlist")
 render_watchlist_refresh_banner()
 st.caption(
-    "Assets shown here are your active watchlist after bias filtering. "
-    "Hide any you don't want."
+    "Watchlist shows only assets with a confirmed M1→M5 sequential bias "
+    "from EMA_Ribbon_Bias_M1_M5 (Bias column). "
+    "Remove MOLD_EMPIRE_EXPORTER from charts — it overwrites snapshots with old EMA bias."
 )
 
 sync_col, filter_col = st.columns(2, gap="small")
@@ -448,7 +449,7 @@ with filter_col:
             source = result.get("bias_source", "none")
             folder_label = result.get("export_folder") or "live MT5 only"
             st.success(
-                f"One-directional bias ({source}): {len(eligible)} kept "
+                f"M1→M5 sequential bias ({source}): {len(eligible)} kept "
                 f"({buy_count} BUY · {sell_count} SELL) · "
                 f"{len(rejected)} hidden · from {folder_label}"
             )
@@ -461,8 +462,8 @@ if not df_assets.empty:
 
     df_scanner = df_assets[~df_assets["Asset"].isin(hidden_assets)].copy()
 
-    # Prefer live export directions; fall back to last Filter Assets result.
-    live_directions = get_export_directions(df_scanner["Asset"].tolist(), allow_live_mt5=True)
+    # Bias arrows come only from confirmed SequentialBias exports (not live EMA).
+    live_directions = get_export_directions(df_scanner["Asset"].tolist(), allow_live_mt5=False)
     if live_directions:
         st.session_state.asset_directions = live_directions
     directions = st.session_state.get("asset_directions", {})
@@ -606,7 +607,7 @@ if not df_assets.empty:
             column_config={
                 "Bias": st.column_config.TextColumn(
                     "Bias",
-                    help="↑ blue = bullish (BUY) · ↓ red = bearish (SELL)",
+                    help="Confirmed M1→M5 sequential bias from the chart indicator · ↑ BUY · ↓ SELL · — = none",
                     width="small",
                 ),
                 r"\volatile": st.column_config.TextColumn(

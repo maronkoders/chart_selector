@@ -144,27 +144,29 @@ def _parse_optional_float(value) -> float | None:
 
 
 def _has_one_directional_bias(exported: dict) -> tuple[bool, str | None, str]:
-    """Return (ok, direction, reason) for a MOLD_EMPIRE_EXPORTER snapshot.
+    """Return (ok, direction, reason) for an MT5 bias snapshot.
 
-    One-directional bias means M1/M5/M15/M30 are all BUY or all SELL, and
-    daily change / price vs daily close confirm that same direction.
+    Watchlist eligibility is driven only by EMA_Ribbon_Bias_M1_M5
+    ``SequentialBias`` (confirmed M1→M5 crossover sequence). Legacy
+    MOLD_EMPIRE_EXPORTER all-TF EMA alignment is ignored so a chart showing
+    Directional Bias NONE cannot still appear as BUY/SELL on the watchlist.
     """
-    bias_map = exported.get("Bias") or {}
-    normalized = {tf: _normalize_bias(bias_map.get(tf)) for tf in ("M1", "M5", "M15", "M30")}
+    has_sequential_fields = (
+        "SequentialBias" in exported
+        or exported.get("Source") == "EMA_Ribbon_Bias_M1_M5"
+    )
+    if not has_sequential_fields:
+        return False, None, "waiting for M1→M5 sequential export"
 
-    if any(v is None for v in normalized.values()):
-        return False, None, "missing/neutral bias"
+    sequential = _normalize_bias(exported.get("SequentialBias"))
+    if sequential is None:
+        return False, None, "sequential bias not confirmed"
 
-    unique = set(normalized.values())
-    if len(unique) != 1:
-        return False, None, "mixed timeframe biases"
-
-    direction = unique.pop()
     current_price = _parse_optional_float(exported.get("Current Price"))
     daily_close = _parse_optional_float(exported.get("Daily Close"))
     daily_change = _parse_optional_float(exported.get("Daily Change"))
 
-    if direction == "BUY":
+    if sequential == "BUY":
         ok = (
             current_price is not None
             and daily_close is not None
@@ -182,8 +184,34 @@ def _has_one_directional_bias(exported: dict) -> tuple[bool, str | None, str]:
         )
 
     if ok:
-        return True, direction, "aligned"
-    return False, direction, "daily price/change not confirming bias"
+        return True, sequential, "m1→m5 sequential"
+    return False, sequential, "daily price/change not confirming bias"
+
+
+def get_export_tf_biases(
+    symbols: list[str],
+    export_folder: str | Path | None = None,
+    allow_live_mt5: bool = True,
+) -> dict[str, dict[str, str | None]]:
+    """Return {symbol: {"M1": BUY|SELL|None, "M5": ..., "direction": ...}} from exports."""
+    if export_folder is not None:
+        folder: Path | None = Path(export_folder)
+    else:
+        folder = _mt5_files_folder() or _discover_export_folder()
+
+    out: dict[str, dict[str, str | None]] = {}
+    for symbol in symbols:
+        snapshot, _source = _load_bias_snapshot(symbol, folder, allow_live_mt5=allow_live_mt5)
+        if not snapshot:
+            continue
+        bias_map = snapshot.get("Bias") or {}
+        ok, direction, _reason = _has_one_directional_bias(snapshot)
+        out[symbol] = {
+            "M1": _normalize_bias(bias_map.get("M1")),
+            "M5": _normalize_bias(bias_map.get("M5")),
+            "direction": direction if ok else _normalize_bias(snapshot.get("SequentialBias")) or direction,
+        }
+    return out
 
 
 def _ema_last(closes, period: int) -> float | None:
@@ -306,10 +334,10 @@ def get_export_directions(
     export_folder: str | Path | None = None,
     allow_live_mt5: bool = True,
 ) -> dict[str, str]:
-    """Return {symbol: "BUY"|"SELL"} for assets with aligned one-directional bias.
+    """Return {symbol: "BUY"|"SELL"} for assets with confirmed M1→M5 SequentialBias.
 
-    Prefers MOLD_EMPIRE_EXPORTER JSON when present; otherwise computes the same
-    EMA/daily-change rules live from MT5 (works for Weltrade and other brokers).
+    Reads EMA_Ribbon_Bias_M1_M5 JSON from MQL5/Files. Live MT5 EMA fallback is
+    optional and cannot invent a sequential confirmation on its own.
     """
     if export_folder is not None:
         folder: Path | None = Path(export_folder)
@@ -445,15 +473,15 @@ def filter_assets_from_exports(
     export_folder: str | Path | None = None,
     allow_live_mt5: bool = True,
 ) -> dict:
-    """Filter assets by one-directional bias (exporter JSON and/or live MT5).
+    """Filter assets by confirmed M1→M5 SequentialBias from chart exports.
 
-    Keeps assets with one-directional bias:
-    - M1, M5, M15, M30 all BUY or all SELL
-    - Daily change and price vs daily close confirm that direction
+    Keeps assets only when EMA_Ribbon_Bias_M1_M5 wrote SequentialBias BUY/SELL
+    and daily change / price vs daily close confirm that direction.
+    Legacy MOLD all-TF EMA alignment does not qualify.
 
     Each call re-reads per-symbol JSON from the connected terminal's MQL5/Files
-    folder. Fresh exports win; stale exports fall back to live MT5 EMA bias so
-    Filter matches what open charts show.
+    folder. Fresh exports win; stale exports may fall back to live MT5 only if
+    allow_live_mt5=True (live snapshots still need SequentialBias to qualify).
 
     Returns:
       {

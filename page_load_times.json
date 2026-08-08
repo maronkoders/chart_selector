@@ -1,573 +1,6 @@
 {
   "visits": [
     {
-      "page": "Dashboard",
-      "started_at": "2026-08-06T08:28:36",
-      "finished_at": "2026-08-06T08:28:37",
-      "elapsed_ms": 1134.6,
-      "elapsed_sec": 1.135,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T08:36:04",
-      "finished_at": "2026-08-06T08:36:05",
-      "elapsed_ms": 188.4,
-      "elapsed_sec": 0.188,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T08:46:06",
-      "finished_at": "2026-08-06T08:46:06",
-      "elapsed_ms": 205.8,
-      "elapsed_sec": 0.206,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T08:56:06",
-      "finished_at": "2026-08-06T08:56:06",
-      "elapsed_ms": 216.8,
-      "elapsed_sec": 0.217,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T09:06:07",
-      "finished_at": "2026-08-06T09:06:07",
-      "elapsed_ms": 195.2,
-      "elapsed_sec": 0.195,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T09:16:07",
-      "finished_at": "2026-08-06T09:16:07",
-      "elapsed_ms": 214.5,
-      "elapsed_sec": 0.214,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T09:26:08",
-      "finished_at": "2026-08-06T09:26:08",
-      "elapsed_ms": 229.2,
-      "elapsed_sec": 0.229,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T09:36:09",
-      "finished_at": "2026-08-06T09:36:09",
-      "elapsed_ms": 205.2,
-      "elapsed_sec": 0.205,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T09:46:09",
-      "finished_at": "2026-08-06T09:46:09",
-      "elapsed_ms": 217.9,
-      "elapsed_sec": 0.218,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T09:56:10",
-      "finished_at": "2026-08-06T09:56:11",
-      "elapsed_ms": 200.8,
-      "elapsed_sec": 0.201,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T10:06:11",
-      "finished_at": "2026-08-06T10:06:12",
-      "elapsed_ms": 184.4,
-      "elapsed_sec": 0.184,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T10:16:12",
-      "finished_at": "2026-08-06T10:16:13",
-      "elapsed_ms": 190.8,
-      "elapsed_sec": 0.191,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T10:26:13",
-      "finished_at": "2026-08-06T10:26:14",
-      "elapsed_ms": 190.6,
-      "elapsed_sec": 0.191,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T10:36:14",
-      "finished_at": "2026-08-06T10:36:15",
-      "elapsed_ms": 193.3,
-      "elapsed_sec": 0.193,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T10:46:15",
-      "finished_at": "2026-08-06T10:46:16",
-      "elapsed_ms": 187.5,
-      "elapsed_sec": 0.187,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T10:56:16",
-      "finished_at": "2026-08-06T10:56:16",
-      "elapsed_ms": 212.7,
-      "elapsed_sec": 0.213,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T11:06:17",
-      "finished_at": "2026-08-06T11:06:17",
-      "elapsed_ms": 211.2,
-      "elapsed_sec": 0.211,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T11:16:17",
-      "finished_at": "2026-08-06T11:16:17",
-      "elapsed_ms": 198.9,
-      "elapsed_sec": 0.199,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T11:26:18",
-      "finished_at": "2026-08-06T11:26:18",
-      "elapsed_ms": 190.1,
-      "elapsed_sec": 0.19,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T11:36:18",
-      "finished_at": "2026-08-06T11:36:18",
-      "elapsed_ms": 215.2,
-      "elapsed_sec": 0.215,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T11:46:19",
-      "finished_at": "2026-08-06T11:46:19",
-      "elapsed_ms": 227.8,
-      "elapsed_sec": 0.228,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T11:56:19",
-      "finished_at": "2026-08-06T11:56:19",
-      "elapsed_ms": 210.5,
-      "elapsed_sec": 0.211,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T12:06:20",
-      "finished_at": "2026-08-06T12:06:20",
-      "elapsed_ms": 208.4,
-      "elapsed_sec": 0.208,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T12:16:20",
-      "finished_at": "2026-08-06T12:16:20",
-      "elapsed_ms": 203.2,
-      "elapsed_sec": 0.203,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T12:26:20",
-      "finished_at": "2026-08-06T12:26:21",
-      "elapsed_ms": 216.6,
-      "elapsed_sec": 0.217,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-08-06T12:29:12",
-      "finished_at": "2026-08-06T12:29:13",
-      "elapsed_ms": 938.5,
-      "elapsed_sec": 0.938,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T12:36:21",
-      "finished_at": "2026-08-06T12:36:22",
-      "elapsed_ms": 210.8,
-      "elapsed_sec": 0.211,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T12:46:22",
-      "finished_at": "2026-08-06T12:46:22",
-      "elapsed_ms": 221.6,
-      "elapsed_sec": 0.222,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T12:56:23",
-      "finished_at": "2026-08-06T12:56:24",
-      "elapsed_ms": 189.0,
-      "elapsed_sec": 0.189,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T13:06:24",
-      "finished_at": "2026-08-06T13:06:25",
-      "elapsed_ms": 209.0,
-      "elapsed_sec": 0.209,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T13:16:25",
-      "finished_at": "2026-08-06T13:16:26",
-      "elapsed_ms": 196.9,
-      "elapsed_sec": 0.197,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T13:26:26",
-      "finished_at": "2026-08-06T13:26:27",
-      "elapsed_ms": 194.1,
-      "elapsed_sec": 0.194,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T13:36:27",
-      "finished_at": "2026-08-06T13:36:27",
-      "elapsed_ms": 203.9,
-      "elapsed_sec": 0.204,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T13:46:27",
-      "finished_at": "2026-08-06T13:46:28",
-      "elapsed_ms": 219.8,
-      "elapsed_sec": 0.22,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T13:56:28",
-      "finished_at": "2026-08-06T13:56:28",
-      "elapsed_ms": 214.0,
-      "elapsed_sec": 0.214,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T14:06:31",
-      "finished_at": "2026-08-06T14:06:31",
-      "elapsed_ms": 239.1,
-      "elapsed_sec": 0.239,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T14:16:32",
-      "finished_at": "2026-08-06T14:16:32",
-      "elapsed_ms": 207.9,
-      "elapsed_sec": 0.208,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T14:26:32",
-      "finished_at": "2026-08-06T14:26:32",
-      "elapsed_ms": 223.3,
-      "elapsed_sec": 0.223,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T14:36:33",
-      "finished_at": "2026-08-06T14:36:33",
-      "elapsed_ms": 212.5,
-      "elapsed_sec": 0.213,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T14:46:33",
-      "finished_at": "2026-08-06T14:46:33",
-      "elapsed_ms": 205.6,
-      "elapsed_sec": 0.206,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T14:56:33",
-      "finished_at": "2026-08-06T14:56:34",
-      "elapsed_ms": 222.5,
-      "elapsed_sec": 0.222,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T15:06:34",
-      "finished_at": "2026-08-06T15:06:34",
-      "elapsed_ms": 219.3,
-      "elapsed_sec": 0.219,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T15:16:34",
-      "finished_at": "2026-08-06T15:16:35",
-      "elapsed_ms": 247.0,
-      "elapsed_sec": 0.247,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T15:26:35",
-      "finished_at": "2026-08-06T15:26:35",
-      "elapsed_ms": 199.5,
-      "elapsed_sec": 0.2,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T15:36:35",
-      "finished_at": "2026-08-06T15:36:35",
-      "elapsed_ms": 227.8,
-      "elapsed_sec": 0.228,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T15:46:36",
-      "finished_at": "2026-08-06T15:46:36",
-      "elapsed_ms": 198.5,
-      "elapsed_sec": 0.199,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T15:56:36",
-      "finished_at": "2026-08-06T15:56:36",
-      "elapsed_ms": 207.4,
-      "elapsed_sec": 0.207,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T16:06:36",
-      "finished_at": "2026-08-06T16:06:37",
-      "elapsed_ms": 207.2,
-      "elapsed_sec": 0.207,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T16:16:37",
-      "finished_at": "2026-08-06T16:16:37",
-      "elapsed_ms": 204.5,
-      "elapsed_sec": 0.205,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-08-06T16:26:23",
-      "finished_at": "2026-08-06T16:26:23",
-      "elapsed_ms": 206.8,
-      "elapsed_sec": 0.207,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-08-06T16:29:26",
-      "finished_at": "2026-08-06T16:29:27",
-      "elapsed_ms": 949.2,
-      "elapsed_sec": 0.949,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-08-06T18:52:28",
-      "finished_at": "2026-08-06T18:52:29",
-      "elapsed_ms": 1315.9,
-      "elapsed_sec": 1.316,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Dashboard",
-      "started_at": "2026-08-06T18:52:33",
-      "finished_at": "2026-08-06T18:52:34",
-      "elapsed_ms": 900.8,
-      "elapsed_sec": 0.901,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T18:52:44",
-      "finished_at": "2026-08-06T18:52:44",
-      "elapsed_ms": 122.1,
-      "elapsed_sec": 0.122,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T19:02:48",
-      "finished_at": "2026-08-06T19:02:48",
-      "elapsed_ms": 186.5,
-      "elapsed_sec": 0.187,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T19:12:49",
-      "finished_at": "2026-08-06T19:12:49",
-      "elapsed_ms": 379.5,
-      "elapsed_sec": 0.379,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T19:22:50",
-      "finished_at": "2026-08-06T19:22:51",
-      "elapsed_ms": 194.4,
-      "elapsed_sec": 0.194,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T19:32:51",
-      "finished_at": "2026-08-06T19:32:52",
-      "elapsed_ms": 195.7,
-      "elapsed_sec": 0.196,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T19:42:52",
-      "finished_at": "2026-08-06T19:42:52",
-      "elapsed_ms": 222.5,
-      "elapsed_sec": 0.223,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T19:52:52",
-      "finished_at": "2026-08-06T19:52:53",
-      "elapsed_ms": 275.7,
-      "elapsed_sec": 0.276,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T20:02:53",
-      "finished_at": "2026-08-06T20:02:53",
-      "elapsed_ms": 202.4,
-      "elapsed_sec": 0.202,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T20:12:53",
-      "finished_at": "2026-08-06T20:12:54",
-      "elapsed_ms": 218.5,
-      "elapsed_sec": 0.219,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
-      "page": "Indices Advisor",
-      "started_at": "2026-08-06T20:22:54",
-      "finished_at": "2026-08-06T20:22:55",
-      "elapsed_ms": 220.0,
-      "elapsed_sec": 0.22,
-      "ok": true,
-      "detail": "Connected as profile 'DerivVU' (login 101239396)."
-    },
-    {
       "page": "Indices Advisor",
       "started_at": "2026-08-06T20:32:55",
       "finished_at": "2026-08-06T20:32:56",
@@ -1799,26 +1232,593 @@
       "elapsed_sec": 0.211,
       "ok": true,
       "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T17:18:30",
+      "finished_at": "2026-08-07T17:18:31",
+      "elapsed_ms": 579.2,
+      "elapsed_sec": 0.579,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T17:19:12",
+      "finished_at": "2026-08-07T17:19:14",
+      "elapsed_ms": 2215.0,
+      "elapsed_sec": 2.215,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-08-07T17:25:31",
+      "finished_at": "2026-08-07T17:25:33",
+      "elapsed_ms": 1555.1,
+      "elapsed_sec": 1.555,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T17:25:45",
+      "finished_at": "2026-08-07T17:25:47",
+      "elapsed_ms": 1755.0,
+      "elapsed_sec": 1.755,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T17:35:48",
+      "finished_at": "2026-08-07T17:35:48",
+      "elapsed_ms": 221.2,
+      "elapsed_sec": 0.221,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T17:45:49",
+      "finished_at": "2026-08-07T17:45:49",
+      "elapsed_ms": 231.9,
+      "elapsed_sec": 0.232,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T17:55:49",
+      "finished_at": "2026-08-07T17:55:49",
+      "elapsed_ms": 227.3,
+      "elapsed_sec": 0.227,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T17:59:53",
+      "finished_at": "2026-08-07T17:59:53",
+      "elapsed_ms": 188.0,
+      "elapsed_sec": 0.188,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T17:59:53",
+      "finished_at": "2026-08-07T17:59:53",
+      "elapsed_ms": 106.1,
+      "elapsed_sec": 0.106,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-08-07T18:00:04",
+      "finished_at": "2026-08-07T18:00:05",
+      "elapsed_ms": 951.7,
+      "elapsed_sec": 0.952,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-08-07T18:04:29",
+      "finished_at": "2026-08-07T18:04:30",
+      "elapsed_ms": 904.3,
+      "elapsed_sec": 0.904,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-08-07T18:04:50",
+      "finished_at": "2026-08-07T18:04:51",
+      "elapsed_ms": 906.7,
+      "elapsed_sec": 0.907,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-08-07T18:04:59",
+      "finished_at": "2026-08-07T18:04:59",
+      "elapsed_ms": 900.7,
+      "elapsed_sec": 0.901,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:06:10",
+      "finished_at": "2026-08-07T18:06:10",
+      "elapsed_ms": 121.1,
+      "elapsed_sec": 0.121,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:06:10",
+      "finished_at": "2026-08-07T18:06:10",
+      "elapsed_ms": 102.6,
+      "elapsed_sec": 0.103,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:06:13",
+      "finished_at": "2026-08-07T18:06:13",
+      "elapsed_ms": 111.9,
+      "elapsed_sec": 0.112,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:06:13",
+      "finished_at": "2026-08-07T18:06:13",
+      "elapsed_ms": 98.6,
+      "elapsed_sec": 0.099,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:16:14",
+      "finished_at": "2026-08-07T18:16:14",
+      "elapsed_ms": 383.5,
+      "elapsed_sec": 0.384,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:24:19",
+      "finished_at": "2026-08-07T18:24:21",
+      "elapsed_ms": 1523.2,
+      "elapsed_sec": 1.523,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:24:22",
+      "finished_at": "2026-08-07T18:24:22",
+      "elapsed_ms": 261.0,
+      "elapsed_sec": 0.261,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:25:10",
+      "finished_at": "2026-08-07T18:25:10",
+      "elapsed_ms": 171.7,
+      "elapsed_sec": 0.172,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:25:10",
+      "finished_at": "2026-08-07T18:25:11",
+      "elapsed_ms": 173.8,
+      "elapsed_sec": 0.174,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-08-07T18:25:42",
+      "finished_at": "2026-08-07T18:25:42",
+      "elapsed_ms": 39.9,
+      "elapsed_sec": 0.04,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-08-07T18:25:53",
+      "finished_at": "2026-08-07T18:25:53",
+      "elapsed_ms": 5.2,
+      "elapsed_sec": 0.005,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-08-07T18:36:16",
+      "finished_at": "2026-08-07T18:36:16",
+      "elapsed_ms": 138.5,
+      "elapsed_sec": 0.138,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Settings",
+      "started_at": "2026-08-07T18:40:43",
+      "finished_at": "2026-08-07T18:40:43",
+      "elapsed_ms": 18.7,
+      "elapsed_sec": 0.019,
+      "ok": true,
+      "detail": "profiles=8"
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-08-07T18:40:51",
+      "finished_at": "2026-08-07T18:40:55",
+      "elapsed_ms": 3891.6,
+      "elapsed_sec": 3.892,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-08-07T18:41:42",
+      "finished_at": "2026-08-07T18:41:44",
+      "elapsed_ms": 1595.3,
+      "elapsed_sec": 1.595,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:42:01",
+      "finished_at": "2026-08-07T18:42:03",
+      "elapsed_ms": 2079.8,
+      "elapsed_sec": 2.08,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:42:18",
+      "finished_at": "2026-08-07T18:42:20",
+      "elapsed_ms": 2692.7,
+      "elapsed_sec": 2.693,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Dashboard",
+      "started_at": "2026-08-07T18:44:51",
+      "finished_at": "2026-08-07T18:44:54",
+      "elapsed_ms": 2011.5,
+      "elapsed_sec": 2.012,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:46:32",
+      "finished_at": "2026-08-07T18:46:32",
+      "elapsed_ms": 178.9,
+      "elapsed_sec": 0.179,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:46:32",
+      "finished_at": "2026-08-07T18:46:32",
+      "elapsed_ms": 161.2,
+      "elapsed_sec": 0.161,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:46:35",
+      "finished_at": "2026-08-07T18:46:35",
+      "elapsed_ms": 111.5,
+      "elapsed_sec": 0.112,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:46:35",
+      "finished_at": "2026-08-07T18:46:35",
+      "elapsed_ms": 145.7,
+      "elapsed_sec": 0.146,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:46:38",
+      "finished_at": "2026-08-07T18:46:38",
+      "elapsed_ms": 146.4,
+      "elapsed_sec": 0.146,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:46:38",
+      "finished_at": "2026-08-07T18:46:38",
+      "elapsed_ms": 95.8,
+      "elapsed_sec": 0.096,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:47:26",
+      "finished_at": "2026-08-07T18:47:26",
+      "elapsed_ms": 403.9,
+      "elapsed_sec": 0.404,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:47:27",
+      "finished_at": "2026-08-07T18:47:27",
+      "elapsed_ms": 320.1,
+      "elapsed_sec": 0.32,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:50:04",
+      "finished_at": "2026-08-07T18:50:05",
+      "elapsed_ms": 857.7,
+      "elapsed_sec": 0.858,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:50:05",
+      "finished_at": "2026-08-07T18:50:06",
+      "elapsed_ms": 529.2,
+      "elapsed_sec": 0.529,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:50:34",
+      "finished_at": "2026-08-07T18:50:35",
+      "elapsed_ms": 441.2,
+      "elapsed_sec": 0.441,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:50:35",
+      "finished_at": "2026-08-07T18:50:36",
+      "elapsed_ms": 384.8,
+      "elapsed_sec": 0.385,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:51:05",
+      "finished_at": "2026-08-07T18:51:05",
+      "elapsed_ms": 366.2,
+      "elapsed_sec": 0.366,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:51:06",
+      "finished_at": "2026-08-07T18:51:06",
+      "elapsed_ms": 213.2,
+      "elapsed_sec": 0.213,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T18:52:22",
+      "finished_at": "2026-08-07T18:52:23",
+      "elapsed_ms": 204.2,
+      "elapsed_sec": 0.204,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:01:07",
+      "finished_at": "2026-08-07T19:01:08",
+      "elapsed_ms": 422.0,
+      "elapsed_sec": 0.422,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:11:09",
+      "finished_at": "2026-08-07T19:11:10",
+      "elapsed_ms": 481.7,
+      "elapsed_sec": 0.482,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:20:49",
+      "finished_at": "2026-08-07T19:20:50",
+      "elapsed_ms": 491.5,
+      "elapsed_sec": 0.492,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:20:50",
+      "finished_at": "2026-08-07T19:20:51",
+      "elapsed_ms": 300.6,
+      "elapsed_sec": 0.301,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:21:02",
+      "finished_at": "2026-08-07T19:21:02",
+      "elapsed_ms": 326.7,
+      "elapsed_sec": 0.327,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:21:03",
+      "finished_at": "2026-08-07T19:21:03",
+      "elapsed_ms": 170.1,
+      "elapsed_sec": 0.17,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:21:40",
+      "finished_at": "2026-08-07T19:21:40",
+      "elapsed_ms": 120.0,
+      "elapsed_sec": 0.12,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:21:40",
+      "finished_at": "2026-08-07T19:21:40",
+      "elapsed_ms": 110.9,
+      "elapsed_sec": 0.111,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:22:34",
+      "finished_at": "2026-08-07T19:22:43",
+      "elapsed_ms": 8907.1,
+      "elapsed_sec": 8.907,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:22:52",
+      "finished_at": "2026-08-07T19:22:52",
+      "elapsed_ms": 276.7,
+      "elapsed_sec": 0.277,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:23:29",
+      "finished_at": "2026-08-07T19:23:29",
+      "elapsed_ms": 112.8,
+      "elapsed_sec": 0.113,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:23:29",
+      "finished_at": "2026-08-07T19:23:29",
+      "elapsed_ms": 119.4,
+      "elapsed_sec": 0.119,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:23:46",
+      "finished_at": "2026-08-07T19:23:46",
+      "elapsed_ms": 208.9,
+      "elapsed_sec": 0.209,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:23:46",
+      "finished_at": "2026-08-07T19:23:46",
+      "elapsed_ms": 194.0,
+      "elapsed_sec": 0.194,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:33:48",
+      "finished_at": "2026-08-07T19:33:48",
+      "elapsed_ms": 390.1,
+      "elapsed_sec": 0.39,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:43:48",
+      "finished_at": "2026-08-07T19:43:49",
+      "elapsed_ms": 249.0,
+      "elapsed_sec": 0.249,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
+    },
+    {
+      "page": "Indices Advisor",
+      "started_at": "2026-08-07T19:53:49",
+      "finished_at": "2026-08-07T19:53:49",
+      "elapsed_ms": 238.6,
+      "elapsed_sec": 0.239,
+      "ok": true,
+      "detail": "Connected as profile 'DerivVU' (login 101239396)."
     }
   ],
   "summary": {
     "Indices Advisor": {
-      "count": 1380,
-      "total_ms": 1130268.6550996893,
-      "avg_ms": 819.0,
-      "last_ms": 211.4,
+      "count": 1431,
+      "total_ms": 1161192.6428995954,
+      "avg_ms": 811.5,
+      "last_ms": 238.6,
       "min_ms": 3.4,
       "max_ms": 208193.1,
-      "last_at": "2026-08-07T17:08:30"
+      "last_at": "2026-08-07T19:53:49"
     },
     "Dashboard": {
-      "count": 454,
-      "total_ms": 1021510.0150001064,
-      "avg_ms": 2250.0,
-      "last_ms": 2703.6,
+      "count": 462,
+      "total_ms": 1034226.9079000518,
+      "avg_ms": 2238.6,
+      "last_ms": 2011.5,
       "min_ms": 5.2,
       "max_ms": 160725.9,
-      "last_at": "2026-08-07T16:38:10"
+      "last_at": "2026-08-07T18:44:54"
     },
     "Portfolio Profile": {
       "count": 47,
@@ -1830,13 +1830,13 @@
       "last_at": "2026-07-31T12:47:52"
     },
     "Settings": {
-      "count": 507,
-      "total_ms": 21983.318701143617,
+      "count": 511,
+      "total_ms": 22185.55530113099,
       "avg_ms": 43.4,
-      "last_ms": 15.6,
+      "last_ms": 18.7,
       "min_ms": 1.7,
       "max_ms": 8415.6,
-      "last_at": "2026-08-07T11:24:19"
+      "last_at": "2026-08-07T18:40:43"
     },
     "Journal": {
       "count": 1,
@@ -1857,5 +1857,5 @@
       "last_at": "2026-08-02T13:06:42"
     }
   },
-  "updated_at": "2026-08-07T17:08:30"
+  "updated_at": "2026-08-07T19:53:49"
 }

@@ -3,13 +3,16 @@
 //|                        EMA Ribbon (50-110) + M1→M5 Bias          |
 //|  Directional bias ONLY when: M1 ribbon crossover, then M5        |
 //|  crossover in the SAME direction. M5→M1 order is discarded.      |
-//|  Extra M1 crosses while waiting / after bias do not flip bias    |
-//|  until a fresh M1→M5 sequence confirms the new direction.        |
+//|  Extra M1 crosses do not flip a confirmed bias until a fresh     |
+//|  M1→M5 sequence completes in the new direction.                  |
+//|                                                                  |
+//|  Crossovers are rebuilt from bar history on every new M1 bar, so |
+//|  the state never depends on when the indicator was attached.     |
 //+------------------------------------------------------------------+
 #property copyright   "Infynite Solutions"
 #property link        ""
-#property version     "1.00"
-#property description "EMA Ribbon 50-110 | Bias = M1 crossover followed by M5 crossover"
+#property version     "2.00"
+#property description "EMA Ribbon 50-110 | M1→M5 bias (history replay) + asset_snapshot export"
 #property indicator_chart_window
 #property indicator_buffers 13
 #property indicator_plots   13
@@ -109,11 +112,24 @@
 input group "=== Applied Price ==="
 input ENUM_APPLIED_PRICE InpAppliedPrice = PRICE_CLOSE; // Applied Price
 
+input group "=== Crossover Detection ==="
+input int    InpConfirmBarsM1     = 2;     // M1 closes fully outside ribbon to accept a cross
+input int    InpConfirmBarsM5     = 1;     // M5 closes fully outside ribbon to accept a cross
+input double InpMinPenetrationPct = 10.0;  // Min penetration past ribbon edge, % of ribbon width
+input int    InpPendingExpiryMin  = 30;    // Minutes an M1 lead stays valid (0 = never expires)
+input int    InpHistoryBarsM1     = 1440;  // M1 bars replayed to rebuild the sequence
+
 input group "=== Bias / Signals ==="
-input bool   InpShowMarkers   = true;   // Draw M1/M5 crossover markers
+input bool   InpShowMarkers   = true;   // Draw the current M1→M5 sequence only
+input bool   InpShowPending   = true;   // Also mark an M1 lead still waiting for M5
 input bool   InpShowDashboard = true;   // Show bias dashboard
 input bool   InpEnableAlerts  = true;   // Alert when bias is confirmed
 input bool   InpDebug         = false;  // Log crossover / bias decisions
+
+input group "=== Python Dashboard Export ==="
+input bool   InpEnableExport     = true;              // Write asset_snapshot_*.json for Streamlit
+input string InpExportPrefix     = "asset_snapshot_"; // Same prefix as MOLD_EMPIRE_EXPORTER
+input bool   InpExportOnEveryTick = true;             // Keep Files fresh for Filter Assets
 
 input group "=== Marker Colors ==="
 input color  InpM1LineColor   = clrSilver;
@@ -145,23 +161,39 @@ int EMA90_Handle,  EMA95_Handle,  EMA100_Handle, EMA105_Handle, EMA110_Handle;
 int hM1_fast, hM1_slow;
 int hM5_fast, hM5_slow;
 
-//--- Sequence state
-// pendingDir: armed by first M1 crossover while idle (1=bull, -1=bear, 0=none)
-// directionalBias: confirmed only after matching M5 crossover that FOLLOWED that M1
-int      g_pendingDir       = 0;
-datetime g_pendingM1Time    = 0;
-double   g_pendingM1Price   = 0;
-int      g_directionalBias  = 0;   // 1=bullish, -1=bearish, 0=none
+//--- One detected ribbon crossover
+struct XEvent
+  {
+   datetime          knownTime;   // bar CLOSE time — when the cross became knowable
+   datetime          barTime;     // bar OPEN time — used for drawing
+   double            price;       // close of the confirming bar
+   int               dir;         // +1 bullish, -1 bearish
+   int               tfMinutes;   // 1 = M1, 5 = M5
+  };
+
+//--- Replayed state (rebuilt from history, never accumulated tick by tick)
+int      g_directionalBias  = 0;   // 1 = bullish, -1 = bearish, 0 = none
 datetime g_biasConfirmTime  = 0;
-double   g_biasConfirmPrice = 0;
+int      g_pendingDir       = 0;   // latest M1 lead waiting for M5
+datetime g_pendingTime      = 0;
+int      g_m1Side           = 0;   // current confirmed ribbon side per TF
+int      g_m5Side           = 0;
 
-// Last clear side of price vs ribbon: 1=fully above, -1=fully below, 0=unset
-int      g_m1LastSide       = 0;
-int      g_m5LastSide       = 0;
+//--- Only the sequence in force is kept for drawing; older ones are dropped
+XEvent   g_leadEvent;              // M1 leg of the confirmed sequence
+XEvent   g_confirmEvent;           // M5 leg of the confirmed sequence
+bool     g_hasSequence      = false;
+XEvent   g_pendingEvent;           // M1 lead still waiting for its M5
+bool     g_hasPendingEvent  = false;
 
-datetime g_lastM1BarTime    = 0;
-datetime g_lastM5BarTime    = 0;
-int      g_markerSerial     = 0;
+datetime g_lastReplayBar    = 0;   // M1 bar the last replay ran on
+datetime g_lastAlertedTime  = 0;
+bool     g_firstReplayDone  = false;
+
+int      g_lastExportedBias = 999;   // force first write
+int      g_lastExportedPend = 999;
+int      g_lastExportedM1   = 999;
+int      g_lastExportedM5   = 999;
 
 string   DASH_PREFIX        = "ERB_DASH_";
 string   MARK_PREFIX        = "ERB_MARK_";
@@ -235,23 +267,24 @@ void OnDeinit(const int reason)
 
    ObjectsDeleteAll(0, DASH_PREFIX);
    ObjectsDeleteAll(0, MARK_PREFIX);
+   Comment("");
   }
 
 //+------------------------------------------------------------------+
-//| Price fully above (+1) / fully below (-1) ribbon edges, else 0   |
+//| Formatting helpers                                                |
 //+------------------------------------------------------------------+
-int RibbonSide(const double closePrice, const double emaFast, const double emaSlow)
-  {
-   if(closePrice > emaFast && closePrice > emaSlow) return  1;
-   if(closePrice < emaFast && closePrice < emaSlow) return -1;
-   return 0;
-  }
-
 string DirStr(const int dir)
   {
    if(dir > 0) return "BULLISH";
    if(dir < 0) return "BEARISH";
    return "NONE";
+  }
+
+string BiasJson(const int dir)
+  {
+   if(dir > 0) return "BUY";
+   if(dir < 0) return "SELL";
+   return "NEUT";
   }
 
 color DirColor(const int dir)
@@ -261,107 +294,294 @@ color DirColor(const int dir)
    return clrSilver;
   }
 
-//+------------------------------------------------------------------+
-//| Detect ribbon pierce using last clear side on closed bars.       |
-//| Returns +1 bullish cross (below→above), -1 bearish (above→below) |
-//+------------------------------------------------------------------+
-int DetectRibbonCrossover(const ENUM_TIMEFRAMES tf,
-                          const int hFast, const int hSlow,
-                          int &lastClearSide,
-                          datetime &outBarTime,
-                          double &outClose)
+string SafeSymbol(string symbol)
   {
-   outBarTime = 0;
-   outClose   = 0;
-
-   // Closed bar only (shift 1)
-   double closeArr[], fastArr[], slowArr[];
-   ArraySetAsSeries(closeArr, true);
-   ArraySetAsSeries(fastArr, true);
-   ArraySetAsSeries(slowArr, true);
-
-   if(CopyClose(_Symbol, tf, 1, 1, closeArr) < 1) return 0;
-   if(CopyBuffer(hFast, 0, 1, 1, fastArr) < 1)     return 0;
-   if(CopyBuffer(hSlow, 0, 1, 1, slowArr) < 1)      return 0;
-
-   datetime barTime = iTime(_Symbol, tf, 1);
-   if(barTime <= 0) return 0;
-
-   int side = RibbonSide(closeArr[0], fastArr[0], slowArr[0]);
-   outBarTime = barTime;
-   outClose   = closeArr[0];
-
-   if(side == 0)
-      return 0;   // still inside ribbon — wait for a clear side
-
-   if(lastClearSide == 0)
+   string s = symbol;
+   for(int i = 0; i < StringLen(s); i++)
      {
-      lastClearSide = side;
-      return 0;
+      ushort c = StringGetCharacter(s, i);
+      if((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+         (c >= '0' && c <= '9') || c == '_' || c == '-')
+         continue;
+      StringSetCharacter(s, i, (ushort)'_');
      }
-
-   if(side == lastClearSide)
-      return 0;
-
-   // Clear side flipped → full ribbon crossover in the new side's direction
-   int cross = side;
-   lastClearSide = side;
-   return cross;
+   return s;
   }
 
 //+------------------------------------------------------------------+
-void DrawCrossoverMarker(const string tag,
-                         const datetime t,
-                         const double price,
-                         const color clr,
-                         const string label)
+//| Price fully above (+1) / fully below (-1) the ribbon, else 0.    |
+//| A close must clear the nearest edge by InpMinPenetrationPct of   |
+//| the ribbon width, so grazing the edge is not a crossover.        |
+//+------------------------------------------------------------------+
+int RibbonSide(const double closePrice, const double emaFast, const double emaSlow)
   {
-   if(!InpShowMarkers || t <= 0) return;
+   double upper  = MathMax(emaFast, emaSlow);
+   double lower  = MathMin(emaFast, emaSlow);
+   double buffer = (upper - lower) * (InpMinPenetrationPct / 100.0);
 
-   g_markerSerial++;
-   string vname = StringFormat("%s%s_%d_V", MARK_PREFIX, tag, g_markerSerial);
-   string tname = StringFormat("%s%s_%d_T", MARK_PREFIX, tag, g_markerSerial);
-   string hname = StringFormat("%s%s_%d_H", MARK_PREFIX, tag, g_markerSerial);
+   if(closePrice > upper + buffer) return  1;
+   if(closePrice < lower - buffer) return -1;
+   return 0;
+  }
+
+//+------------------------------------------------------------------+
+//| Rebuild every ribbon crossover on one timeframe from bar history.|
+//| A side change counts only after InpConfirmBars closes hold the   |
+//| new side, which removes single-bar whipsaw crossings.            |
+//+------------------------------------------------------------------+
+bool ScanTFEvents(const ENUM_TIMEFRAMES tf,
+                  const int hFast,
+                  const int hSlow,
+                  const int wantBars,
+                  const int confirmBars,
+                  XEvent &events[],
+                  int &finalSide)
+  {
+   ArrayFree(events);
+   finalSide = 0;
+
+   int available = Bars(_Symbol, tf);
+   if(available < 150) return false;
+
+   int bars = MathMin(wantBars, available - 2);
+   if(bars < 20) return false;
+
+   double closes[], fast[], slow[];
+   datetime times[];
+   ArraySetAsSeries(closes, false);
+   ArraySetAsSeries(fast,   false);
+   ArraySetAsSeries(slow,   false);
+   ArraySetAsSeries(times,  false);
+
+   // start_pos 1 skips the live bar; data arrives oldest → newest
+   int gotC = CopyClose (_Symbol, tf, 1, bars, closes);
+   int gotT = CopyTime  (_Symbol, tf, 1, bars, times);
+   int gotF = CopyBuffer(hFast, 0, 1, bars, fast);
+   int gotS = CopyBuffer(hSlow, 0, 1, bars, slow);
+   if(gotC <= 0 || gotT <= 0 || gotF <= 0 || gotS <= 0) return false;
+
+   // Re-copy everything at the shortest length so all four arrays stay aligned
+   int usable = MathMin(MathMin(gotC, gotT), MathMin(gotF, gotS));
+   if(usable < 20) return false;
+   if(usable < bars)
+     {
+      bars = usable;
+      if(CopyClose (_Symbol, tf, 1, bars, closes) < bars) return false;
+      if(CopyTime  (_Symbol, tf, 1, bars, times)  < bars) return false;
+      if(CopyBuffer(hFast, 0, 1, bars, fast)      < bars) return false;
+      if(CopyBuffer(hSlow, 0, 1, bars, slow)      < bars) return false;
+     }
+
+   int period  = PeriodSeconds(tf);
+   int need    = MathMax(1, confirmBars);
+   int settled = 0;   // side currently held
+   int cand    = 0;   // side trying to take over
+   int candRun = 0;
+
+   for(int i = 0; i < bars; i++)
+     {
+      if(fast[i] == EMPTY_VALUE || slow[i] == EMPTY_VALUE) continue;
+      if(fast[i] <= 0.0 || slow[i] <= 0.0)                 continue;
+
+      int side = RibbonSide(closes[i], fast[i], slow[i]);
+
+      // Inside the ribbon, or still on the held side → no pending flip
+      if(side == 0 || side == settled)
+        {
+         cand    = 0;
+         candRun = 0;
+         continue;
+        }
+
+      if(side == cand)
+         candRun++;
+      else
+        {
+         cand    = side;
+         candRun = 1;
+        }
+
+      if(candRun < need)
+         continue;
+
+      // The very first settled side is the starting state, not a crossover
+      if(settled != 0)
+        {
+         int n = ArraySize(events);
+         ArrayResize(events, n + 1);
+         events[n].knownTime = times[i] + period;
+         events[n].barTime   = times[i];
+         events[n].price     = closes[i];
+         events[n].dir       = side;
+         events[n].tfMinutes = period / 60;
+        }
+
+      settled = side;
+      cand    = 0;
+      candRun = 0;
+     }
+
+   finalSide = settled;
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| Merge M1 and M5 events by the time each became knowable (bar     |
+//| close). On equal times M1 sorts first, since an M1 cross inside  |
+//| an M5 bar always precedes that M5 bar's close.                   |
+//+------------------------------------------------------------------+
+void MergeEvents(const XEvent &m1[], const XEvent &m5[], XEvent &merged[])
+  {
+   int n1 = ArraySize(m1);
+   int n5 = ArraySize(m5);
+   ArrayResize(merged, n1 + n5);
+
+   int i = 0, j = 0, k = 0;
+   while(i < n1 && j < n5)
+     {
+      bool takeM1;
+      if(m1[i].knownTime != m5[j].knownTime)
+         takeM1 = (m1[i].knownTime < m5[j].knownTime);
+      else
+         takeM1 = true;
+
+      if(takeM1) { merged[k] = m1[i]; i++; }
+      else       { merged[k] = m5[j]; j++; }
+      k++;
+     }
+   while(i < n1) { merged[k] = m1[i]; i++; k++; }
+   while(j < n5) { merged[k] = m5[j]; j++; k++; }
+  }
+
+//+------------------------------------------------------------------+
+//| Replay the sequence rules over the merged crossover list.        |
+//|  - An M1 cross arms (or re-arms) the lead in its direction.      |
+//|  - An M5 cross confirms bias only if it matches the armed lead   |
+//|    and became knowable at or after it.                           |
+//|  - An M5 cross with no lead (M5→M1 order) or against the lead    |
+//|    breaks the sequence; bias is left untouched.                  |
+//+------------------------------------------------------------------+
+void ReplaySequence(const XEvent &events[])
+  {
+   int      bias        = 0;
+   datetime biasTime    = 0;
+   int      pending     = 0;
+   datetime pendingTime = 0;
+   long     expiry      = (long)InpPendingExpiryMin * 60;
+
+   XEvent leadEvt, confirmEvt, pendingEvt;
+   ZeroMemory(leadEvt);
+   ZeroMemory(confirmEvt);
+   ZeroMemory(pendingEvt);
+   bool hasSequence = false;
+
+   int total = ArraySize(events);
+   for(int i = 0; i < total; i++)
+     {
+      // A lead that waited too long for its M5 is no longer valid
+      if(pending != 0 && expiry > 0 &&
+         (long)(events[i].knownTime - pendingTime) > expiry)
+        {
+         pending     = 0;
+         pendingTime = 0;
+        }
+
+      if(events[i].tfMinutes == 1)
+        {
+         // Latest M1 cross is the lead the next M5 must confirm
+         pending     = events[i].dir;
+         pendingTime = events[i].knownTime;
+         pendingEvt  = events[i];
+         continue;
+        }
+
+      if(pending == 0)
+         continue;   // M5 arrived first — discard, keep existing bias
+
+      if(events[i].dir != pending || events[i].knownTime < pendingTime)
+        {
+         pending     = 0;   // sequence broken
+         pendingTime = 0;
+         continue;
+        }
+
+      // Newest valid pair replaces the previous one, so only the sequence
+      // currently in force is ever kept or drawn.
+      bias        = events[i].dir;
+      biasTime    = events[i].knownTime;
+      leadEvt     = pendingEvt;
+      confirmEvt  = events[i];
+      hasSequence = true;
+      pending     = 0;
+      pendingTime = 0;
+     }
+
+   // Expire a lead that is still waiting as of now
+   if(pending != 0 && expiry > 0 &&
+      (long)(TimeCurrent() - pendingTime) > expiry)
+     {
+      pending     = 0;
+      pendingTime = 0;
+     }
+
+   g_directionalBias  = bias;
+   g_biasConfirmTime  = biasTime;
+   g_pendingDir       = pending;
+   g_pendingTime      = pendingTime;
+   g_leadEvent        = leadEvt;
+   g_confirmEvent     = confirmEvt;
+   g_hasSequence      = hasSequence;
+   g_pendingEvent     = pendingEvt;
+   g_hasPendingEvent  = (pending != 0);
+  }
+
+//+------------------------------------------------------------------+
+void DrawCrossoverMarker(const XEvent &e, const string id, const string label,
+                         const ENUM_LINE_STYLE style)
+  {
+   color  clr   = (e.tfMinutes == 1) ? InpM1LineColor : InpM5LineColor;
+   string vname = MARK_PREFIX + id + "_V";
+   string tname = MARK_PREFIX + id + "_T";
 
    if(ObjectFind(0, vname) < 0)
-     {
-      ObjectCreate(0, vname, OBJ_VLINE, 0, t, 0);
-      ObjectSetInteger(0, vname, OBJPROP_COLOR, clr);
-      ObjectSetInteger(0, vname, OBJPROP_STYLE, STYLE_SOLID);
-      ObjectSetInteger(0, vname, OBJPROP_WIDTH, 1);
-      ObjectSetInteger(0, vname, OBJPROP_BACK, true);
-      ObjectSetInteger(0, vname, OBJPROP_SELECTABLE, false);
-     }
-   else
-      ObjectSetInteger(0, vname, OBJPROP_TIME, t);
+      ObjectCreate(0, vname, OBJ_VLINE, 0, e.barTime, 0);
+   ObjectSetInteger(0, vname, OBJPROP_TIME,       e.barTime);
+   ObjectSetInteger(0, vname, OBJPROP_COLOR,      clr);
+   ObjectSetInteger(0, vname, OBJPROP_STYLE,      style);
+   ObjectSetInteger(0, vname, OBJPROP_WIDTH,      1);
+   ObjectSetInteger(0, vname, OBJPROP_BACK,       true);
+   ObjectSetInteger(0, vname, OBJPROP_SELECTABLE, false);
 
    if(ObjectFind(0, tname) < 0)
-     {
-      ObjectCreate(0, tname, OBJ_TEXT, 0, t, price);
-      ObjectSetInteger(0, tname, OBJPROP_COLOR, clrWhite);
-      ObjectSetInteger(0, tname, OBJPROP_FONTSIZE, 8);
-      ObjectSetString (0, tname, OBJPROP_FONT, "Consolas");
-      ObjectSetInteger(0, tname, OBJPROP_ANCHOR, ANCHOR_LEFT_LOWER);
-      ObjectSetInteger(0, tname, OBJPROP_SELECTABLE, false);
-     }
-   ObjectSetString(0, tname, OBJPROP_TEXT, label);
-   ObjectMove(0, tname, 0, t, price);
+      ObjectCreate(0, tname, OBJ_TEXT, 0, e.barTime, e.price);
+   ObjectMove(0, tname, 0, e.barTime, e.price);
+   ObjectSetString (0, tname, OBJPROP_TEXT,
+                    StringFormat("%s (%s)", label, DirStr(e.dir)));
+   ObjectSetInteger(0, tname, OBJPROP_COLOR,      DirColor(e.dir));
+   ObjectSetInteger(0, tname, OBJPROP_FONTSIZE,   8);
+   ObjectSetString (0, tname, OBJPROP_FONT,       "Consolas");
+   ObjectSetInteger(0, tname, OBJPROP_ANCHOR,     ANCHOR_LEFT_LOWER);
+   ObjectSetInteger(0, tname, OBJPROP_SELECTABLE, false);
+  }
 
-   // Horizontal ray from crossover price (matches annotated chart)
-   datetime t2 = t + PeriodSeconds(PERIOD_M5) * 12;
-   if(ObjectFind(0, hname) < 0)
+//+------------------------------------------------------------------+
+//| Draw only the sequence in force: the M1 lead and the M5 that     |
+//| confirmed it, plus an M1 lead still waiting. Superseded pairs    |
+//| are wiped, so the chart never shows stale sequences.             |
+//+------------------------------------------------------------------+
+void DrawSequenceMarkers()
+  {
+   ObjectsDeleteAll(0, MARK_PREFIX);
+   if(!InpShowMarkers) return;
+
+   if(g_hasSequence)
      {
-      ObjectCreate(0, hname, OBJ_TREND, 0, t, price, t2, price);
-      ObjectSetInteger(0, hname, OBJPROP_COLOR, clrWhite);
-      ObjectSetInteger(0, hname, OBJPROP_WIDTH, 1);
-      ObjectSetInteger(0, hname, OBJPROP_RAY_RIGHT, false);
-      ObjectSetInteger(0, hname, OBJPROP_SELECTABLE, false);
+      DrawCrossoverMarker(g_leadEvent,    "SEQ_M1", "M1 Crossover", STYLE_SOLID);
+      DrawCrossoverMarker(g_confirmEvent, "SEQ_M5", "M5 Crossover", STYLE_SOLID);
      }
-   else
-     {
-      ObjectMove(0, hname, 0, t, price);
-      ObjectMove(0, hname, 1, t2, price);
-     }
+
+   if(InpShowPending && g_hasPendingEvent)
+      DrawCrossoverMarker(g_pendingEvent, "LEAD_M1", "M1 lead - waiting M5", STYLE_DOT);
   }
 
 //+------------------------------------------------------------------+
@@ -389,145 +609,153 @@ void UpdateDashboard()
 
    // Distances are from the top-right chart corner
    int x = 12, y = 24, dy = 16;
+
+   string confirmed = (g_biasConfirmTime > 0)
+                      ? TimeToString(g_biasConfirmTime, TIME_MINUTES)
+                      : "--:--";
+
    DashLabel("title", "EMA Ribbon Bias (M1→M5 only)", x, y, clrAqua);
    DashLabel("bias",  StringFormat("Directional Bias : %s", DirStr(g_directionalBias)),
              x, y + dy, DirColor(g_directionalBias));
-   DashLabel("pend",  StringFormat("Pending M1       : %s", DirStr(g_pendingDir)),
-             x, y + 2 * dy, (g_pendingDir == 0 ? clrSilver : clrGold));
-   DashLabel("rule",  "Rule: M1 cross then M5 cross (same dir)",
-             x, y + 3 * dy, clrDimGray);
+   DashLabel("since", StringFormat("Confirmed at     : %s", confirmed),
+             x, y + 2 * dy, clrSilver);
+   DashLabel("pend",  StringFormat("Pending M1 lead  : %s", DirStr(g_pendingDir)),
+             x, y + 3 * dy, (g_pendingDir == 0 ? clrSilver : clrGold));
+   DashLabel("sides", StringFormat("Ribbon M1 / M5   : %s / %s",
+                                   BiasJson(g_m1Side), BiasJson(g_m5Side)),
+             x, y + 4 * dy, clrSilver);
+   DashLabel("rule",  InpEnableExport ? "Export: ON → MQL5/Files/asset_snapshot_*.json"
+                                      : "Export: OFF",
+             x, y + 5 * dy, InpEnableExport ? clrDodgerBlue : clrDimGray);
   }
 
 //+------------------------------------------------------------------+
-//| M1 crossover arms pending. Extra M1s do not retarget pending.    |
-//| Confirmed bias is never changed by M1 alone.                     |
-//+------------------------------------------------------------------+
-void HandleM1Crossover(const int cross, const datetime t, const double price)
+double GetPrevDayClose()
   {
-   if(cross == 0) return;
+   double prevClose[];
+   if(CopyClose(_Symbol, PERIOD_D1, 1, 1, prevClose) < 1)
+      return 0.0;
+   return prevClose[0];
+  }
 
-   DrawCrossoverMarker("M1", t, price, InpM1LineColor,
-                       StringFormat("M1 Crossover (%s)", DirStr(cross)));
-
-   if(InpDebug)
-      Print(StringFormat("M1 crossover %s @ %s | pending=%s bias=%s",
-            DirStr(cross), TimeToString(t), DirStr(g_pendingDir), DirStr(g_directionalBias)));
-
-   // Already waiting for M5 — ignore intermediate M1 crosses (do not retarget)
-   if(g_pendingDir != 0)
-     {
-      if(InpDebug)
-         Print("M1 ignored (pending already armed; waiting for M5)");
-      return;
-     }
-
-   // Arm a new M1→M5 sequence. Existing confirmed bias stays until M5 confirms a flip.
-   g_pendingDir     = cross;
-   g_pendingM1Time  = t;
-   g_pendingM1Price = price;
-
-   if(InpDebug)
-      Print(StringFormat("Pending armed: %s (bias still %s until M5 confirms)",
-            DirStr(g_pendingDir), DirStr(g_directionalBias)));
+double GetDailyChangePercent(const double currentPrice)
+  {
+   double prevClose = GetPrevDayClose();
+   if(prevClose <= 0.0) return 0.0;
+   return ((currentPrice - prevClose) / prevClose) * 100.0;
   }
 
 //+------------------------------------------------------------------+
-//| M5 crossover confirms bias ONLY if a same-direction M1 is armed  |
-//| and that M1 occurred earlier. M5-first / wrong-dir is discarded. |
+//| Write MQL5/Files/asset_snapshot_<symbol>.json for the dashboard  |
+//| Bias.M1 / Bias.M5 = current ribbon side on each TF               |
+//| SequentialBias    = confirmed M1→M5 directional bias             |
 //+------------------------------------------------------------------+
-void HandleM5Crossover(const int cross, const datetime t, const double price)
+void WriteExportFile()
   {
-   if(cross == 0) return;
+   if(!InpEnableExport)
+      return;
 
-   DrawCrossoverMarker("M5", t, price, InpM5LineColor,
-                       StringFormat("M5 Crossover (%s)", DirStr(cross)));
+   double currentPrice = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   if(currentPrice <= 0.0)
+      currentPrice = SymbolInfoDouble(_Symbol, SYMBOL_LAST);
+   double dailyClose  = GetPrevDayClose();
+   double dailyChange = GetDailyChangePercent(currentPrice);
+
+   // Skip redundant writes unless tick-export is on (keeps mtime fresh).
+   if(!InpExportOnEveryTick &&
+      g_m1Side == g_lastExportedM1 &&
+      g_m5Side == g_lastExportedM5 &&
+      g_directionalBias == g_lastExportedBias &&
+      g_pendingDir == g_lastExportedPend)
+      return;
+
+   string filename = InpExportPrefix + SafeSymbol(_Symbol) + ".json";
+   int handle = FileOpen(filename, FILE_WRITE | FILE_ANSI | FILE_TXT);
+   if(handle == INVALID_HANDLE)
+     {
+      Print("Failed to open export file: ", filename, " error=", GetLastError());
+      return;
+     }
+
+   string json = "{\n";
+   json += StringFormat("  \"Asset\": \"%s\",\n", _Symbol);
+   json += StringFormat("  \"Current Price\": %.6f,\n", currentPrice);
+   json += StringFormat("  \"Daily Close\": %s,\n",
+                        (dailyClose > 0.0) ? DoubleToString(dailyClose, 6) : "null");
+   json += StringFormat("  \"Daily Change\": %s,\n",
+                        DoubleToString(dailyChange, 6));
+   json += "  \"Bias\": {\n";
+   json += StringFormat("    \"M1\": \"%s\",\n", BiasJson(g_m1Side));
+   json += StringFormat("    \"M5\": \"%s\",\n", BiasJson(g_m5Side));
+   json += "    \"M15\": \"NEUT\",\n";
+   json += "    \"M30\": \"NEUT\"\n";
+   json += "  },\n";
+   json += StringFormat("  \"SequentialBias\": \"%s\",\n", BiasJson(g_directionalBias));
+   json += StringFormat("  \"PendingM1\": \"%s\",\n", BiasJson(g_pendingDir));
+   json += StringFormat("  \"ConfirmedAt\": \"%s\",\n",
+                        (g_biasConfirmTime > 0) ? TimeToString(g_biasConfirmTime) : "");
+   json += "  \"Source\": \"EMA_Ribbon_Bias_M1_M5\"\n";
+   json += "}\n";
+
+   FileWriteString(handle, json);
+   FileClose(handle);
+
+   g_lastExportedM1   = g_m1Side;
+   g_lastExportedM5   = g_m5Side;
+   g_lastExportedBias = g_directionalBias;
+   g_lastExportedPend = g_pendingDir;
 
    if(InpDebug)
-      Print(StringFormat("M5 crossover %s @ %s | pending=%s bias=%s",
-            DirStr(cross), TimeToString(t), DirStr(g_pendingDir), DirStr(g_directionalBias)));
+      Print("Exported snapshot to ", filename,
+            " | M1=", BiasJson(g_m1Side),
+            " M5=", BiasJson(g_m5Side),
+            " Sequential=", BiasJson(g_directionalBias));
+  }
 
-   // No prior M1 → invalid order (M5 first). Discard — do not set/change bias.
-   if(g_pendingDir == 0)
-     {
-      if(InpDebug)
-         Print("M5 discarded: no prior M1 (M5→M1 order is invalid)");
+//+------------------------------------------------------------------+
+//| Rebuild bias from history. Runs once per closed M1 bar.          |
+//+------------------------------------------------------------------+
+void RebuildBias()
+  {
+   XEvent m1Events[], m5Events[], merged[];
+   int m1Side = 0, m5Side = 0;
+
+   int barsM1 = MathMax(300, InpHistoryBarsM1);
+   int barsM5 = barsM1 / 5 + 150;
+
+   if(!ScanTFEvents(PERIOD_M1, hM1_fast, hM1_slow, barsM1, InpConfirmBarsM1, m1Events, m1Side))
       return;
-     }
-
-   // M5 must be AFTER the armed M1
-   if(t <= g_pendingM1Time)
-     {
-      if(InpDebug)
-         Print("M5 discarded: timestamp not after pending M1");
+   if(!ScanTFEvents(PERIOD_M5, hM5_fast, hM5_slow, barsM5, InpConfirmBarsM5, m5Events, m5Side))
       return;
-     }
 
-   // Direction must match the armed M1
-   if(cross != g_pendingDir)
-     {
-      if(InpDebug)
-         Print(StringFormat("M5 discarded: direction %s != pending M1 %s (pending cleared)",
-               DirStr(cross), DirStr(g_pendingDir)));
-      // Stale / conflicting arm — clear so a fresh M1 can restart the sequence
-      g_pendingDir     = 0;
-      g_pendingM1Time  = 0;
-      g_pendingM1Price = 0;
-      return;
-     }
+   g_m1Side = m1Side;
+   g_m5Side = m5Side;
 
-   // Valid M1 → M5 sequence: set (or flip) directional bias
-   g_directionalBias  = cross;
-   g_biasConfirmTime  = t;
-   g_biasConfirmPrice = price;
+   MergeEvents(m1Events, m5Events, merged);
+   ReplaySequence(merged);
+   DrawSequenceMarkers();
 
    if(InpDebug)
-      Print(StringFormat("BIAS CONFIRMED %s (M1 @ %s → M5 @ %s)",
-            DirStr(g_directionalBias),
-            TimeToString(g_pendingM1Time),
-            TimeToString(t)));
+      Print(StringFormat("Replay: %d M1 + %d M5 crossovers | bias=%s pending=%s",
+            ArraySize(m1Events), ArraySize(m5Events),
+            DirStr(g_directionalBias), DirStr(g_pendingDir)));
 
-   // Clear pending; further M1s alone will not change bias until a new M1→M5 completes
-   g_pendingDir     = 0;
-   g_pendingM1Time  = 0;
-   g_pendingM1Price = 0;
+   // Alert only for a confirmation that is both new and recent, so reloading
+   // the indicator never re-fires historical signals.
+   bool isNew    = (g_directionalBias != 0 && g_biasConfirmTime != g_lastAlertedTime);
+   bool isRecent = (TimeCurrent() - g_biasConfirmTime) <= 2 * PeriodSeconds(PERIOD_M5);
 
-   if(InpEnableAlerts)
+   if(isNew)
      {
+      g_lastAlertedTime = g_biasConfirmTime;
       string msg = StringFormat("%s directional bias CONFIRMED (M1→M5) — %s",
                                 DirStr(g_directionalBias), _Symbol);
-      Alert(msg);
       Comment(msg);
-     }
-  }
-
-//+------------------------------------------------------------------+
-void ProcessBiasLogic()
-  {
-   // Process new closed M1 bar
-   datetime m1Bar = iTime(_Symbol, PERIOD_M1, 1);
-   if(m1Bar > 0 && m1Bar != g_lastM1BarTime)
-     {
-      g_lastM1BarTime = m1Bar;
-      datetime xt = 0;
-      double xp = 0;
-      int cross = DetectRibbonCrossover(PERIOD_M1, hM1_fast, hM1_slow, g_m1LastSide, xt, xp);
-      if(cross != 0)
-         HandleM1Crossover(cross, xt, xp);
+      if(InpEnableAlerts && g_firstReplayDone && isRecent)
+         Alert(msg);
      }
 
-   // Process new closed M5 bar
-   datetime m5Bar = iTime(_Symbol, PERIOD_M5, 1);
-   if(m5Bar > 0 && m5Bar != g_lastM5BarTime)
-     {
-      g_lastM5BarTime = m5Bar;
-      datetime xt = 0;
-      double xp = 0;
-      int cross = DetectRibbonCrossover(PERIOD_M5, hM5_fast, hM5_slow, g_m5LastSide, xt, xp);
-      if(cross != 0)
-         HandleM5Crossover(cross, xt, xp);
-     }
-
-   UpdateDashboard();
+   g_firstReplayDone = true;
   }
 
 //+------------------------------------------------------------------+
@@ -568,7 +796,17 @@ int OnCalculate(const int rates_total,
    if(!CopyRibbon(EMA105_Handle, EMA105_Buffer, rates_total, prev_calculated)) return(0);
    if(!CopyRibbon(EMA110_Handle, EMA110_Buffer, rates_total, prev_calculated)) return(0);
 
-   ProcessBiasLogic();
+   // Full replay once per closed M1 bar — cheap and immune to missed ticks.
+   datetime m1Bar = iTime(_Symbol, PERIOD_M1, 1);
+   if(m1Bar > 0 && m1Bar != g_lastReplayBar)
+     {
+      g_lastReplayBar = m1Bar;
+      RebuildBias();
+     }
+
+   UpdateDashboard();
+   WriteExportFile();
+
    return(rates_total);
   }
 //+------------------------------------------------------------------+
